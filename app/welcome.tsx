@@ -19,6 +19,8 @@ import { useTranslation } from "react-i18next";
 
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/firebase";
+import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
+import { setUser } from "@/src/store/slices/authSlice";
 
 import { LoginModal } from "@/src/components/LoginModal";
 
@@ -35,8 +37,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function WelcomeScreen() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [showLogin, setShowLogin] = useState(false);
 
   // ---------------------------------------
@@ -62,10 +65,10 @@ export default function WelcomeScreen() {
   // Firebase auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
+      dispatch(setUser(user));
     });
     return () => unsubscribe();
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (response?.type === "success") {

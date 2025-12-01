@@ -4,14 +4,22 @@ import { auth } from "@/src/firebase";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
+import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
+import { logout } from "@/src/store/slices/authSlice";
+import { clearProfile } from "@/src/store/slices/userSlice";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const router = useRouter();
+  const { user } = useAppSelector((state) => state.auth);
+  const { profile } = useAppSelector((state) => state.user);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      dispatch(logout());
+      dispatch(clearProfile());
     } catch (err: any) {
       console.log("Logout error:", err.message);
     }
@@ -20,6 +28,19 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t("home.title")}</Text>
+
+      {user && (
+        <View style={styles.userInfo}>
+          <Text style={styles.userText}>
+            {t("home.loggedInAs")}: {user.email || "N/A"}
+          </Text>
+          {profile && (
+            <Text style={styles.userText}>
+              {t("home.name")}: {profile.name || "N/A"}
+            </Text>
+          )}
+        </View>
+      )}
 
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>{t("home.logOut")}</Text>
@@ -43,6 +64,22 @@ const styles = StyleSheet.create({
     color: VSCodeColors.textPrimary,
     fontFamily: Fonts?.mono || "monospace",
     letterSpacing: 0.5,
+  },
+
+  userInfo: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: VSCodeColors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: VSCodeColors.border,
+  },
+
+  userText: {
+    fontSize: 14,
+    color: VSCodeColors.textSecondary,
+    fontFamily: Fonts?.mono || "monospace",
+    marginBottom: 4,
   },
 
   logoutBtn: {

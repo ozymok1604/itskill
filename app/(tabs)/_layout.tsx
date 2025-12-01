@@ -1,37 +1,28 @@
 import { Tabs, Redirect } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/src/firebase";
-import { View, ActivityIndicator } from "react-native";
+import React from "react";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { HapticTab } from "@/src/components/haptic-tab";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
-import { Colors, VSCodeColors } from "@/src/constants/theme";
+import { VSCodeColors } from "@/src/constants/theme";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
+import { useAppSelector } from "@/src/store/hooks";
 
 export default function TabLayout() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  if (isAuthenticated === null) {
+  if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={VSCodeColors.accent} />
       </View>
     );
   }
 
-  if (isAuthenticated === false) {
+  if (!isAuthenticated) {
     return <Redirect href="/welcome" />;
   }
 
@@ -77,3 +68,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: VSCodeColors.background,
+  },
+});

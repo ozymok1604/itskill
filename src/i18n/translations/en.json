@@ -38,6 +38,8 @@
   },
   "home": {
     "title": "Home",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "loggedInAs": "Logged in as",
+    "name": "Name"
   }
 }

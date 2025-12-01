@@ -10,7 +10,7 @@ const resources = {
   ua: { translation: ua },
 };
 
-// Дефолт — українська
+ 
 let phoneLang = "ua";
 
 try {
@@ -20,11 +20,11 @@ try {
     const langCode = locales[0].languageCode;
 
     if (langCode === "uk" || langCode === "ua") {
-      phoneLang = "ua";       // українська система → українська апка
+      phoneLang = "ua";      
     } else if (langCode === "en") {
-      phoneLang = "en";       // англійська система → англійська апка
+      phoneLang = "en";      
     }
-    // інші мови → автоматично "ua"
+   
   }
 } catch (e) {
   console.log("Localization error:", e);
@@ -34,7 +34,7 @@ i18n.use(initReactI18next).init({
   compatibilityJSON: "v3",
   resources,
   lng: 'en',
-  fallbackLng: "ua",   // fallback теж українська
+  fallbackLng: "ua",    
   interpolation: {
     escapeValue: false,
   },

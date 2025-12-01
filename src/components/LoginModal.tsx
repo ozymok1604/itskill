@@ -15,6 +15,8 @@ import { GoogleIcon } from "@/assets/icons/google";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useAppDispatch } from "@/src/store/hooks";
+import { syncUser } from "@/src/store/slices/userSlice";
 
 import {
   signInWithEmailAndPassword,
@@ -38,6 +40,7 @@ type Props = {
 
 export function LoginModal({ visible, onClose }: Props) {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const [mode, setMode] = useState<"login" | "signup">("login");
 
   const [email, setEmail] = useState("");
@@ -97,24 +100,34 @@ export function LoginModal({ visible, onClose }: Props) {
 
   // EMAIL SIGNUP
   // EMAIL SIGNUP
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!formValid) return;
 
     resetErrors();
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(() => {
-        Alert.alert(t("login.success"), t("login.accountCreated"));
-        onClose();
-      })
-      .catch((err) => {
-        if (err.code === "auth/email-already-in-use") {
-          setMode("login");
-          setEmailError(t("login.emailAlreadyInUse"));
-        } else {
-          Alert.alert(t("login.signupError"), err.message);
-        }
-      });
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+      console.log("User created:", cred.user.uid);
+
+      // Sync to server using Redux
+      await dispatch(
+        syncUser({
+          uid: cred.user.uid,
+          email: cred.user.email,
+        })
+      ).unwrap();
+
+      Alert.alert(t("login.success"), t("login.accountCreated"));
+      onClose();
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        setMode("login");
+        setEmailError(t("login.emailAlreadyInUse"));
+      } else {
+        Alert.alert(t("login.signupError"), err.message);
+      }
+    }
   };
 
   // APPLE
