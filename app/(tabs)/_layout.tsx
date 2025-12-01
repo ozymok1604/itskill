@@ -3,7 +3,6 @@ import React from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { HapticTab } from "@/src/components/haptic-tab";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { VSCodeColors } from "@/src/constants/theme";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
@@ -44,7 +43,6 @@ export default function TabLayout() {
           fontWeight: "600",
         },
         headerShown: false,
-        tabBarButton: HapticTab,
       }}
     >
       <Tabs.Screen
