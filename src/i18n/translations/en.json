@@ -1,0 +1,43 @@
+{
+  "welcome": {
+    "continueWithGoogle": "Continue with Google",
+    "signUp": "Sign up",
+    "logIn": "Log in",
+    "loggedIn": "Logged in",
+    "googleLoginSuccess": "Google login successful",
+    "appleLoginSuccess": "Apple login successful",
+    "googleError": "Google Error",
+    "appleError": "Apple Error"
+  },
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "emailPlaceholder": "example@gmail.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "logIn": "Log in",
+    "signUp": "Sign up",
+    "createAccount": "Create account",
+    "or": "OR",
+    "continueWithGoogle": "Continue with Google",
+    "success": "Success",
+    "accountCreated": "Account created",
+    "appleSuccess": "Apple login successful",
+    "googleSuccess": "Google login successful",
+    "error": "Error",
+    "loginError": "Login error",
+    "signupError": "Signup error",
+    "googleError": "Google error",
+    "appleError": "Apple Error",
+    "incorrectCredentials": "Incorrect email or password",
+    "emailAlreadyInUse": "This email is already in use. Please log in."
+  },
+  "tabs": {
+    "home": "Home",
+    "explore": "Explore"
+  },
+  "home": {
+    "title": "Home",
+    "logOut": "Log out"
+  }
+}

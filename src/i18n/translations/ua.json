@@ -1,0 +1,43 @@
+{
+  "welcome": {
+    "continueWithGoogle": "Продовжити з Google",
+    "signUp": "Зареєструватися",
+    "logIn": "Увійти",
+    "loggedIn": "Вхід виконано",
+    "googleLoginSuccess": "Вхід через Google успішний",
+    "appleLoginSuccess": "Вхід через Apple успішний",
+    "googleError": "Помилка Google",
+    "appleError": "Помилка Apple"
+  },
+  "login": {
+    "title": "Увійти",
+    "email": "Ел. пошта",
+    "emailPlaceholder": "example@gmail.com",
+    "password": "Пароль",
+    "passwordPlaceholder": "Введіть пароль",
+    "logIn": "Увійти",
+    "signUp": "Зареєструватися",
+    "createAccount": "Створити акаунт",
+    "or": "АБО",
+    "continueWithGoogle": "Продовжити з Google",
+    "success": "Успішно",
+    "accountCreated": "Акаунт створено",
+    "appleSuccess": "Вхід через Apple успішний",
+    "googleSuccess": "Вхід через Google успішний",
+    "error": "Помилка",
+    "loginError": "Помилка входу",
+    "signupError": "Помилка реєстрації",
+    "googleError": "Помилка Google",
+    "appleError": "Помилка Apple",
+    "incorrectCredentials": "Невірна електронна пошта або пароль",
+    "emailAlreadyInUse": "Ця електронна пошта вже використовується. Будь ласка, увійдіть."
+  },
+  "tabs": {
+    "home": "Головна",
+    "explore": "Досліджувати"
+  },
+  "home": {
+    "title": "Головна",
+    "logOut": "Вийти"
+  }
+}
