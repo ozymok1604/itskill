@@ -6,13 +6,44 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { apiService } from "@/src/services/api";
 
+interface Progress {
+  lessonsCompleted: number;
+  testsTaken: number;
+  totalLessonsAvailable: number | null;
+  progressPercentage: number;
+}
+
+interface QuestionsStats {
+  totalQuestionsAnswered: number;
+  totalCorrectAnswers: number;
+  totalIncorrectAnswers: number;
+  accuracyPercentage: number;
+}
+
 interface UserProfile {
   uid: string;
   email: string | null;
   name?: string;
   avatar?: string;
+  position?: string;
+  subposition?: string;
+  level?: string;
+  progress?: Progress;
+  questionsStats?: QuestionsStats;
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface Subposition{
+  id: string;
+  name: string;
+
+}
+
+interface Position {
+  _id: string;
+  name: string;
+  subpositions: Subposition[];   
 }
 
 interface UserState {
@@ -20,6 +51,8 @@ interface UserState {
   isLoading: boolean;
   error: string | null;
   isSyncing: boolean;
+  positions: Position[];
+  isLoadingPositions: boolean;
 }
 
 const initialState: UserState = {
@@ -27,6 +60,8 @@ const initialState: UserState = {
   isLoading: false,
   error: null,
   isSyncing: false,
+  positions: [],
+  isLoadingPositions: false,
 };
 
 // Async thunks
@@ -38,7 +73,7 @@ export const syncUser = createAsyncThunk(
   ) => {
     try {
       const response = await apiService.syncUser(uid, email);
-      return response.user;
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to sync user");
     }
@@ -50,9 +85,23 @@ export const fetchUser = createAsyncThunk(
   async (uid: string, { rejectWithValue }) => {
     try {
       const response = await apiService.getUser(uid);
-      return response.user;
+      console.log(response,'response')
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to fetch user");
+    }
+  }
+);
+
+export const getPositions = createAsyncThunk(
+  "user/getPositions",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiService.getPositions();
+      console.log(response, "getPositions response");
+      return response.positions || response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch positions");
     }
   }
 );
@@ -88,7 +137,6 @@ const userSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Sync user
     builder
       .addCase(syncUser.pending, (state) => {
         state.isSyncing = true;
@@ -96,14 +144,14 @@ const userSlice = createSlice({
       })
       .addCase(syncUser.fulfilled, (state, action) => {
         state.isSyncing = false;
-        state.profile = action.payload;
+        state.profile = action.payload.user || action.payload;
+        state.error = null;
       })
       .addCase(syncUser.rejected, (state, action) => {
         state.isSyncing = false;
         state.error = action.payload as string;
       });
 
-    // Fetch user
     builder
       .addCase(fetchUser.pending, (state) => {
         state.isLoading = true;
@@ -111,14 +159,14 @@ const userSlice = createSlice({
       })
       .addCase(fetchUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.profile = action.payload;
+        state.profile = action.payload.user || action.payload;
+        state.error = null;
       })
       .addCase(fetchUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });
 
-    // Update user
     builder
       .addCase(updateUserProfile.pending, (state) => {
         state.isLoading = true;
@@ -130,6 +178,22 @@ const userSlice = createSlice({
       })
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    builder
+      .addCase(getPositions.pending, (state) => {
+        state.isLoadingPositions = true;
+        state.error = null;
+      })
+      .addCase(getPositions.fulfilled, (state, action) => {
+        state.isLoadingPositions = false;
+        state.positions = Array.isArray(action.payload) 
+          ? action.payload 
+          : action.payload.positions || [];
+      })
+      .addCase(getPositions.rejected, (state, action) => {
+        state.isLoadingPositions = false;
         state.error = action.payload as string;
       });
   },

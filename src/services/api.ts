@@ -75,9 +75,9 @@ class ApiService {
     });
   }
 
-  async updateUser(uid: string, data: Partial<{ email: string; name: string }>) {
+  async updateUser(uid: string, data: Partial<{ email: string; name: string; position: string; subposition: string; level: string }>) {
     return this.request<{ success: boolean; user: any }>(`/users/${uid}`, {
-      method: "PATCH",
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
@@ -91,6 +91,20 @@ class ApiService {
 
   async getCourse(courseId: string) {
     return this.request<{ course: any }>(`/courses/${courseId}`, {
+      method: "GET",
+    });
+  }
+
+  // Positions endpoints
+  async getPositions() {
+    return this.request<{ positions: any[] }>("/positions", {
+      method: "GET",
+    });
+  }
+
+  // Sections endpoints
+  async getSections(subpositionId: string) {
+    return this.request<{ sections: any[] }>(`/sections/${subpositionId}`, {
       method: "GET",
     });
   }

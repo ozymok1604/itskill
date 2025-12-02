@@ -16,7 +16,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch } from "@/src/store/hooks";
-import { syncUser } from "@/src/store/slices/userSlice";
+import { syncUser, fetchUser } from "@/src/store/slices/userSlice";
 
 import {
   signInWithEmailAndPassword,
@@ -69,37 +69,51 @@ export function LoginModal({ visible, onClose }: Props) {
       const { id_token } = res.params;
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
-        .then(onClose)
+        .then(async (userCredential) => {
+          if (userCredential.user) {
+            try {
+              await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+            } catch (error) {
+              console.error("Failed to fetch user profile:", error);
+            }
+          }
+          onClose();
+        })
         .catch((err) => Alert.alert(t("login.googleError"), err.message));
     }
-  }, [res]);
+  }, [res, dispatch]);
 
-  // EMAIL LOGIN
-  // EMAIL LOGIN
-  // EMAIL LOGIN
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!formValid) return;
 
     resetErrors();
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then(onClose)
-      .catch((err) => {
-        if (
-          err.code === "auth/invalid-credential" ||
-          err.code === "auth/wrong-password" ||
-          err.code === "auth/user-not-found"
-        ) {
-          setEmailError(t("login.incorrectCredentials"));
-          setPasswordError(t("login.incorrectCredentials"));
-        } else {
-          Alert.alert(t("login.loginError"), err.message);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (userCredential.user) {
+        try {
+          await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
         }
-      });
+      }
+      
+      onClose();
+    } catch (err: any) {
+      if (
+        err.code === "auth/invalid-credential" ||
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/user-not-found"
+      ) {
+        setEmailError(t("login.incorrectCredentials"));
+        setPasswordError(t("login.incorrectCredentials"));
+      } else {
+        Alert.alert(t("login.loginError"), err.message);
+      }
+    }
   };
 
-  // EMAIL SIGNUP
-  // EMAIL SIGNUP
   const handleSignup = async () => {
     if (!formValid) return;
 
@@ -110,13 +124,15 @@ export function LoginModal({ visible, onClose }: Props) {
 
       console.log("User created:", cred.user.uid);
 
-      // Sync to server using Redux
-      await dispatch(
+      const syncedUser = await dispatch(
         syncUser({
           uid: cred.user.uid,
           email: cred.user.email,
         })
       ).unwrap();
+
+      console.log("User synced:", syncedUser);
+      console.log("Synced user position:", syncedUser?.user?.position || syncedUser?.position);
 
       Alert.alert(t("login.success"), t("login.accountCreated"));
       onClose();
@@ -130,7 +146,6 @@ export function LoginModal({ visible, onClose }: Props) {
     }
   };
 
-  // APPLE
   const handleApple = async () => {
     try {
       const result = await AppleAuthentication.signInAsync({
@@ -147,7 +162,16 @@ export function LoginModal({ visible, onClose }: Props) {
         idToken: result.identityToken,
       });
 
-      await signInWithCredential(auth, credential);
+      const userCredential = await signInWithCredential(auth, credential);
+      
+      if (userCredential.user) {
+        try {
+          await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+        }
+      }
+      
       onClose();
     } catch (err: any) {
       if (err.code !== "ERR_CANCELED")
@@ -160,12 +184,10 @@ export function LoginModal({ visible, onClose }: Props) {
       <Pressable style={styles.overlay} onPress={onClose} />
 
       <View style={styles.modal}>
-        {/* Close button */}
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <Text style={styles.close}>✕</Text>
         </TouchableOpacity>
 
-        {/* Tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity
             onPress={() => setMode("login")}
@@ -193,7 +215,6 @@ export function LoginModal({ visible, onClose }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* Inputs */}
         <Input
           error={emailError}
           placeholder={t("login.email")}
@@ -208,21 +229,18 @@ export function LoginModal({ visible, onClose }: Props) {
           onChange={setPassword}
         />
 
-        {/* Submit button */}
         <Button
           title={mode === "login" ? t("login.logIn") : t("login.createAccount")}
           onPress={mode === "login" ? handleLogin : handleSignup}
           disabled={!formValid}
         />
 
-        {/* Divider */}
         <View style={styles.dividerRow}>
           <View style={styles.line} />
           <Text style={styles.or}>{t("login.or")}</Text>
           <View style={styles.line} />
         </View>
 
-        {/* GOOGLE */}
         <Button
           type="white"
           icon={<GoogleIcon size={18} />}
@@ -230,7 +248,6 @@ export function LoginModal({ visible, onClose }: Props) {
           onPress={() => promptGoogle()}
         />
 
-        {/* APPLE */}
         <AppleAuthentication.AppleAuthenticationButton
           buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
@@ -263,7 +280,6 @@ const styles = StyleSheet.create({
     gap: 20,
   },
 
-  // CLOSE BUTTON
   closeBtn: {
     position: "absolute",
     top: 12,
@@ -275,7 +291,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts?.mono || "monospace",
   },
 
-  // TABS
   tabs: {
     flexDirection: "row",
     marginBottom: 12,
@@ -310,7 +325,6 @@ const styles = StyleSheet.create({
     color: VSCodeColors.textPrimary,
   },
 
-  // DIVIDER
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",

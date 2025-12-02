@@ -1,33 +1,29 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { signOut } from "firebase/auth";
-import { auth } from "@/src/firebase";
-import { useRouter } from "expo-router";
+import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
-import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
-import { logout } from "@/src/store/slices/authSlice";
-import { clearProfile } from "@/src/store/slices/userSlice";
+import { useAppSelector } from "@/src/store/hooks";
+import { List } from "phosphor-react-native";
+import { useDrawer } from "@/src/contexts/DrawerContext";
+import { TouchableOpacity } from "react-native";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
-  const router = useRouter();
+  const { openDrawer } = useDrawer();
   const { user } = useAppSelector((state) => state.auth);
   const { profile } = useAppSelector((state) => state.user);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      dispatch(logout());
-      dispatch(clearProfile());
-    } catch (err: any) {
-      console.log("Logout error:", err.message);
-    }
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t("home.title")}</Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={openDrawer}
+          style={styles.menuButton}
+          activeOpacity={0.7}
+        >
+          <List size={24} color={VSCodeColors.textPrimary} weight="bold" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{t("home.title")}</Text>
+      </View>
 
       {user && (
         <View style={styles.userInfo}>
@@ -41,10 +37,6 @@ export default function HomeScreen() {
           )}
         </View>
       )}
-
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>{t("home.logOut")}</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -53,17 +45,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: VSCodeColors.background,
-    paddingTop: 80,
+    paddingTop: 60,
     paddingHorizontal: 20,
   },
-
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 12,
+  },
+  menuButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: VSCodeColors.surface,
+    borderWidth: 1,
+    borderColor: VSCodeColors.border,
+  },
   title: {
     fontSize: 28,
     fontWeight: "700",
-    marginBottom: 20,
     color: VSCodeColors.textPrimary,
     fontFamily: Fonts?.mono || "monospace",
     letterSpacing: 0.5,
+    flex: 1,
   },
 
   userInfo: {
@@ -80,23 +84,5 @@ const styles = StyleSheet.create({
     color: VSCodeColors.textSecondary,
     fontFamily: Fonts?.mono || "monospace",
     marginBottom: 4,
-  },
-
-  logoutBtn: {
-    backgroundColor: VSCodeColors.buttonDanger,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: VSCodeColors.error,
-  },
-
-  logoutText: {
-    color: VSCodeColors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: Fonts?.mono || "monospace",
-    letterSpacing: 0.3,
   },
 });

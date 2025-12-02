@@ -6,6 +6,7 @@ import {
   Animated,
   Easing,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
 
@@ -21,6 +22,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/firebase";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
 import { setUser } from "@/src/store/slices/authSlice";
+import { fetchUser } from "@/src/store/slices/userSlice";
 
 import { LoginModal } from "@/src/components/LoginModal";
 
@@ -42,27 +44,17 @@ export default function WelcomeScreen() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [showLogin, setShowLogin] = useState(false);
 
-  // ---------------------------------------
-  // GOOGLE SIGN-IN
-  // ---------------------------------------
   const [request, response, promptGoogle] = Google.useAuthRequest({
     iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
     webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
     responseType: "id_token",
   });
 
-  // ---------------------------------------
-  // TYPEWRITER ANIMATION
-  // ---------------------------------------
   const fullText = "SkillUp●";
   const [typedText, setTypedText] = useState("");
 
-  // ---------------------------------------
-  // BOTTOM SHEET ANIMATION
-  // ---------------------------------------
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-  // Firebase auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       dispatch(setUser(user));
@@ -76,12 +68,19 @@ export default function WelcomeScreen() {
       const credential = GoogleAuthProvider.credential(id_token);
 
       signInWithCredential(auth, credential)
-        .then(() => {
+        .then(async (userCredential) => {
+          if (userCredential.user) {
+            try {
+              await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+            } catch (error) {
+              console.error("Failed to fetch user profile:", error);
+            }
+          }
           Alert.alert(t("welcome.loggedIn"), t("welcome.googleLoginSuccess"));
         })
         .catch((err) => Alert.alert(t("welcome.googleError"), err.message));
     }
-  }, [response]);
+  }, [response, dispatch]);
 
   useEffect(() => {
     let index = 0;
@@ -102,9 +101,6 @@ export default function WelcomeScreen() {
     }).start();
   }, []);
 
-  // ---------------------------------------
-  // APPLE SIGN-IN
-  // ---------------------------------------
   const handleApple = async () => {
     try {
       const appleResult = await AppleAuthentication.signInAsync({
@@ -123,7 +119,15 @@ export default function WelcomeScreen() {
         idToken: appleResult.identityToken,
       });
 
-      await signInWithCredential(auth, credential);
+      const userCredential = await signInWithCredential(auth, credential);
+
+      if (userCredential.user) {
+        try {
+          await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+        }
+      }
 
       Alert.alert(t("welcome.loggedIn"), t("welcome.appleLoginSuccess"));
     } catch (err: any) {
@@ -132,9 +136,8 @@ export default function WelcomeScreen() {
     }
   };
 
-  // Перевірка автентифікації ПІСЛЯ всіх хуків
-  if (isAuthenticated === true) {
-    return <Redirect href="/(tabs)" />;
+  if (isAuthenticated) {
+    return <Redirect href="/" />;
   }
 
   return (
@@ -145,20 +148,17 @@ export default function WelcomeScreen() {
         <Text style={styles.title}>{typedText}</Text>
       </View>
 
-      {/* Bottom Sheet */}
       <Animated.View
         style={[styles.bottomSheet, { transform: [{ translateY: slideAnim }] }]}
       >
-        {/* Apple */}
         <AppleAuthentication.AppleAuthenticationButton
           buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
           cornerRadius={16}
           style={{ width: "100%", height: 54 }}
-          onPress={handleApple} // 🔥 Apple login
+          onPress={handleApple}
         />
 
-        {/* Google */}
         <Button
           type="white"
           title={t("welcome.continueWithGoogle")}
@@ -166,14 +166,12 @@ export default function WelcomeScreen() {
           onPress={() => promptGoogle()}
         />
 
-        {/* Sign up */}
         <Button
           type="primary"
           title={t("welcome.signUp")}
           onPress={() => setShowLogin(true)}
         />
 
-        {/* Log in */}
         <Button
           type="secondary"
           title={t("welcome.logIn")}
@@ -220,5 +218,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     position: "absolute",
     bottom: 0,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: VSCodeColors.background,
+  },
+  loadingText: {
+    color: VSCodeColors.textSecondary,
+    fontFamily: Fonts?.mono || "monospace",
+    fontSize: 14,
+    marginTop: 12,
   },
 });

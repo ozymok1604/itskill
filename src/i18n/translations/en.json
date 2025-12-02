@@ -34,12 +34,48 @@
   },
   "tabs": {
     "home": "Home",
-    "explore": "Explore"
+    "sections": "Sections"
   },
   "home": {
     "title": "Home",
     "logOut": "Log out",
     "loggedInAs": "Logged in as",
     "name": "Name"
+  },
+  "onboarding": {
+    "title": "Choose your position",
+    "subtitle": "Select the position that best describes your level",
+    "subtitleSelect": "Choose your subposition",
+    "subtitleDescription": "Select the subposition that best matches your role",
+    "next": "Next",
+    "finish": "Finish",
+    "back": "Back",
+    "level": {
+      "title": "Choose your level",
+      "subtitle": "Select your experience level",
+      "trainee": "Trainee",
+      "junior": "Junior",
+      "middle": "Middle",
+      "senior": "Senior"
+    }
+  },
+  "drawer": {
+    "profile": "Profile",
+    "email": "Email",
+    "position": "Position",
+    "subposition": "Subposition",
+    "level": "Level",
+    "progress": "Progress",
+    "answeredQuestions": "Answered Questions",
+    "accuracy": "Accuracy",
+    "settings": "Settings",
+    "logOut": "Log out"
+  },
+  "sections": {
+    "title": "Sections",
+    "loading": "Loading sections...",
+    "empty": "No sections available",
+    "noSubposition": "Please complete onboarding to view sections",
+    "testsCompleted": "Tests completed"
   }
 }
