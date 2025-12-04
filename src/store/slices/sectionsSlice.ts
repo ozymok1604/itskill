@@ -7,7 +7,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { apiService } from "@/src/services/api";
 
 export interface Section {
-  sectionId: string;
+  _id: string;
   title: string;
   description: string;
   order: number;
@@ -29,11 +29,22 @@ const initialState: SectionsState = {
 // Async thunks
 export const getSections = createAsyncThunk(
   "sections/getSections",
-  async (subpositionId: string, { rejectWithValue }) => {
+  async (data: { subpositionId: string; uid?: string } | string, { rejectWithValue }) => {
     try {
-      const response = await apiService.getSections(subpositionId);
+      // Підтримуємо старий формат (тільки subpositionId) та новий (об'єкт)
+      let subpositionId: string;
+      let uid: string | undefined;
+      
+      if (typeof data === 'string') {
+        subpositionId = data;
+        uid = undefined; // Якщо передано тільки строку, uid не передаємо
+      } else {
+        subpositionId = data.subpositionId;
+        uid = data.uid;
+      }
+      
+      const response = await apiService.getSections(subpositionId, uid);
  
-    
       return response.sections || response;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to fetch sections");
@@ -62,9 +73,10 @@ const sectionsSlice = createSlice({
       })
       .addCase(getSections.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.sections = Array.isArray(action.payload)
-          ? action.payload
-          : action.payload.sections || [];
+        const payload = action.payload as Section[] | { sections: Section[] };
+        state.sections = Array.isArray(payload)
+          ? payload
+          : (payload as { sections: Section[] }).sections || [];
         state.error = null;
       })
       .addCase(getSections.rejected, (state, action) => {

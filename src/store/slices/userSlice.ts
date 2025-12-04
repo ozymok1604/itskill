@@ -20,6 +20,14 @@ interface QuestionsStats {
   accuracyPercentage: number;
 }
 
+interface Section {
+  sectionId: string;
+  title: string;
+  description: string;
+  order: number;
+  progress: number;
+}
+
 interface UserProfile {
   uid: string;
   email: string | null;
@@ -30,6 +38,7 @@ interface UserProfile {
   level?: string;
   progress?: Progress;
   questionsStats?: QuestionsStats;
+  sections?: Section[];
   createdAt?: string;
   updatedAt?: string;
 }

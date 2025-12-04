@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { VSCodeColors, Fonts, FontWeights } from "@/src/constants/theme";
 
 interface ProgressScaleProps {
@@ -15,6 +16,7 @@ export function ProgressScale({
   color = VSCodeColors.accent,
   showLabel = true,
 }: ProgressScaleProps) {
+  const { t } = useTranslation();
   const percentage = Math.min((current / max) * 100, 100);
 
   return (
@@ -22,7 +24,7 @@ export function ProgressScale({
       {showLabel && (
         <View style={styles.labelContainer}>
           <Text style={styles.labelText}>
-            {current} / {max}
+            {current} / {max} {t("sections.testsPassed")}
           </Text>
         </View>
       )}

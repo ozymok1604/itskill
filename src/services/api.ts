@@ -103,9 +103,159 @@ class ApiService {
   }
 
   // Sections endpoints
-  async getSections(subpositionId: string) {
-    return this.request<{ sections: any[] }>(`/sections/${subpositionId}`, {
+  async getSections(subpositionId: string, uid?: string) {
+    const url = uid 
+      ? `/sections/${subpositionId}?uid=${uid}`
+      : `/sections/${subpositionId}`;
+    return this.request<{ sections: any[] }>(url, {
       method: "GET",
+    });
+  }
+
+  // Submit test result
+  async submitTestResult(
+    uid: string,
+    data: {
+      sectionId: string;
+      correctAnswers: number;
+      totalQuestions: number;
+      position: string;
+      subposition: string;
+      level: string;
+      testNumber: number;
+    }
+  ) {
+    return this.request(`/users/${uid}/submit-test`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Test endpoints
+  async createTest(data: {
+    position: string;
+    subposition: string;
+    level: string;
+    section: string;
+    testNumber: number;
+  }) {
+    return this.request<any>("/create-test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Streaming test creation - відправляє питання по одному
+  // Використовуємо XMLHttpRequest для React Native сумісності
+  async createTestStream(
+    data: {
+      position: string;
+      subposition: string;
+      level: string;
+      section: string;
+      testNumber: number;
+      language?: string;
+    },
+    onQuestion: (question: any) => void,
+    onComplete: () => void,
+    onError: (error: string) => void
+  ) {
+    const url = `${this.baseURL}/create-test-stream`;
+    
+    console.log("🚀 Starting test stream request to:", url);
+    console.log("Request data:", data);
+
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let lastPosition = 0;
+      let isComplete = false;
+
+      xhr.open("POST", url, true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.responseType = "text";
+      
+      // Обробка прогресивного отримання даних
+      const processData = () => {
+        if (isComplete) return;
+        
+        const currentText = xhr.responseText;
+        if (currentText.length > lastPosition) {
+          const newData = currentText.substring(lastPosition);
+          lastPosition = currentText.length;
+
+          const lines = newData.split("\n");
+          
+          for (const line of lines) {
+            if (line.trim() && line.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(line.slice(6));
+                console.log("📨 Received SSE data:", parsed.type);
+                
+                  if (parsed.type === "question") {
+                    console.log("✅ Question received:", parsed.data.id);
+                    onQuestion(parsed.data);
+                  } else if (parsed.type === "initial_ready") {
+                    console.log("✅ Initial questions ready - user can start!");
+                    // Викликаємо onComplete для припинення loading, але stream продовжується
+                    onComplete();
+                  } else if (parsed.type === "complete") {
+                    console.log("✅ Stream complete - all questions generated");
+                    isComplete = true;
+                    resolve();
+                    return;
+                  } else if (parsed.type === "error") {
+                    console.error("❌ Stream error:", parsed.message);
+                    isComplete = true;
+                    onError(parsed.message || "Unknown error");
+                    reject(new Error(parsed.message || "Unknown error"));
+                    return;
+                  }
+              } catch (err) {
+                console.error("❌ Error parsing SSE data:", err, "Line:", line);
+              }
+            }
+          }
+        }
+      };
+      
+      xhr.onprogress = () => {
+        processData();
+      };
+      
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.LOADING) {
+          processData();
+        } else if (xhr.readyState === XMLHttpRequest.DONE) {
+          processData(); // Обробити останні дані
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (!isComplete) {
+              console.log("✅ Stream reading completed");
+              onComplete();
+              resolve();
+            }
+          } else {
+            const error = `HTTP error! status: ${xhr.status}`;
+            console.error("❌ Response error:", error);
+            if (!isComplete) {
+              onError(error);
+              reject(new Error(error));
+            }
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        const error = "Network error";
+        console.error("❌ createTestStream network error");
+        if (!isComplete) {
+          isComplete = true;
+          onError(error);
+          reject(new Error(error));
+        }
+      };
+
+      xhr.send(JSON.stringify(data));
     });
   }
 }

@@ -76,6 +76,34 @@
     "loading": "Loading sections...",
     "empty": "No sections available",
     "noSubposition": "Please complete onboarding to view sections",
-    "testsCompleted": "Tests completed"
+    "testsCompleted": "Tests completed",
+    "testsPassed": "tests passed",
+    "startTest": "Start Test"
+  },
+  "test": {
+    "question": "Question",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "previous": "Previous",
+    "next": "Next",
+    "finish": "Finish",
+    "loading": "Loading test...",
+    "error": "Failed to load test"
+  },
+  "testResults": {
+    "excellent": "Excellent! 🎉",
+    "excellentMessage": "You're a master! Keep it up!",
+    "great": "Great! 👏",
+    "greatMessage": "Well done! You're on the right track!",
+    "good": "Good! 👍",
+    "goodMessage": "Not bad, but there's room for growth!",
+    "keepGoing": "Keep Going 💪",
+    "keepGoingMessage": "Don't give up! Review the material and try again!",
+    "timeUp": "Time's Up! ⏰",
+    "timeUpMessage": "Time for the test has run out. Try again and be faster!",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "score": "Score",
+    "backToSections": "Back to Sections"
   }
 }
