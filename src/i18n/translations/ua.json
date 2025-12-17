@@ -129,6 +129,24 @@
     "title": "Налаштування",
     "language": "Мова",
     "english": "Англійська",
-    "ukrainian": "Українська"
+    "ukrainian": "Українська",
+    "dangerZone": "Небезпечна зона",
+    "deleteAccount": "Видалити акаунт",
+    "deleteAccountTitle": "Видалити акаунт?",
+    "deleteAccountMessage": "Цю дію неможливо скасувати. Всі ваші дані, прогрес та історія тестів будуть назавжди видалені.",
+    "cancel": "Скасувати",
+    "confirmDelete": "Видалити",
+    "error": "Помилка",
+    "notLoggedIn": "Ви не авторизовані",
+    "deleteError": "Не вдалося видалити акаунт. Спробуйте ще раз.",
+    "reauthRequired": "Підтвердіть особу",
+    "reauthMessage": "З міркувань безпеки, будь ласка, вийдіть і увійдіть знову перед видаленням акаунту.",
+    "reauthDescription": "З міркувань безпеки, підтвердіть вашу особу для видалення акаунту.",
+    "enterPassword": "Введіть пароль",
+    "passwordRequired": "Пароль обов'язковий",
+    "wrongPassword": "Невірний пароль",
+    "reauthFailed": "Помилка авторизації. Спробуйте ще раз.",
+    "continueWithGoogle": "Продовжити з Google",
+    "continueWithApple": "Продовжити з Apple"
   }
 }

@@ -90,6 +90,12 @@ class ApiService {
     });
   }
 
+  async deleteUser(uid: string) {
+    return this.request<{ success: boolean; message: string }>(`/users/${uid}`, {
+      method: "DELETE",
+    });
+  }
+
   // Add more API methods as needed
   async getCourses() {
     return this.request<{ courses: any[] }>("/courses", {

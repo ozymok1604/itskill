@@ -129,6 +129,24 @@
     "title": "Settings",
     "language": "Language",
     "english": "English",
-    "ukrainian": "Ukrainian"
+    "ukrainian": "Ukrainian",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountTitle": "Delete Account?",
+    "deleteAccountMessage": "This action cannot be undone. All your data, progress, and test history will be permanently deleted.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete",
+    "error": "Error",
+    "notLoggedIn": "You are not logged in",
+    "deleteError": "Failed to delete account. Please try again.",
+    "reauthRequired": "Confirm Your Identity",
+    "reauthMessage": "For security reasons, please log out and log back in before deleting your account.",
+    "reauthDescription": "For security reasons, please verify your identity to delete your account.",
+    "enterPassword": "Enter your password",
+    "passwordRequired": "Password is required",
+    "wrongPassword": "Incorrect password",
+    "reauthFailed": "Authentication failed. Please try again.",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple"
   }
 }
