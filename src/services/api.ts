@@ -3,9 +3,14 @@
  * Centralized API calls for the application
  */
 
-const API_BASE_URL = __DEV__
-  ? "http://localhost:4000/api"
-  : "https://your-production-api.com/api";
+// NOTE:
+// - "localhost" will NOT work on a physical device (it points to the phone itself).
+// - "https://localhost" also fails unless you have a valid TLS cert, which you don't for local dev.
+// Use EXPO_PUBLIC_API_BASE_URL to override per environment.
+//
+// Example:
+// EXPO_PUBLIC_API_BASE_URL="https://skillup-backend-bizu.onrender.com/api"
+const API_BASE_URL = 'http://192.168.0.100:4000/api'
 
 export interface ApiError {
   message: string;
@@ -38,12 +43,12 @@ class ApiService {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          message: `HTTP error! status: ${response.status}`,
-        }));
+        const errorData = await response.json().catch(() => ({} as any));
 
         throw {
-          message: errorData.message || "An error occurred",
+          message:
+            (errorData && (errorData.message || errorData.error)) ||
+            `HTTP error! status: ${response.status}`,
           code: errorData.code,
           status: response.status,
         } as ApiError;
@@ -63,20 +68,23 @@ class ApiService {
 
   // User endpoints
   async syncUser(uid: string, email: string | null) {
-    return this.request<{ success: boolean; user: any }>("/users/sync", {
+    // Backend returns the user object directly
+    return this.request<any>("/users/sync", {
       method: "POST",
       body: JSON.stringify({ uid, email }),
     });
   }
 
   async getUser(uid: string) {
-    return this.request<{ user: any }>(`/users/${uid}`, {
+    // Backend returns the user object directly
+    return this.request<any>(`/users/${uid}`, {
       method: "GET",
     });
   }
 
   async updateUser(uid: string, data: Partial<{ email: string; name: string; position: string; subposition: string; level: string }>) {
-    return this.request<{ success: boolean; user: any }>(`/users/${uid}`, {
+    // Backend returns the user object directly
+    return this.request<any>(`/users/${uid}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -113,6 +121,13 @@ class ApiService {
   }
 
   // Submit test result
+  async generateTTS(text: string): Promise<{ audioUrl: string }> {
+    return this.request<{ audioUrl: string }>("/ai/generate-tts", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  }
+
   async submitTestResult(
     uid: string,
     data: {
@@ -125,7 +140,8 @@ class ApiService {
       testNumber: number;
     }
   ) {
-    return this.request(`/users/${uid}/submit-test`, {
+    // Backend returns the updated user object directly
+    return this.request<any>(`/users/${uid}/submit-test`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -139,7 +155,7 @@ class ApiService {
     section: string;
     testNumber: number;
   }) {
-    return this.request<any>("/create-test", {
+    return this.request<any>("/ai/create-test", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -160,7 +176,7 @@ class ApiService {
     onComplete: () => void,
     onError: (error: string) => void
   ) {
-    const url = `${this.baseURL}/create-test-stream`;
+    const url = `${this.baseURL}/ai/create-test-stream`;
     
     console.log("🚀 Starting test stream request to:", url);
     console.log("Request data:", data);

@@ -33,14 +33,25 @@
     "emailAlreadyInUse": "Ця електронна пошта вже використовується. Будь ласка, увійдіть."
   },
   "tabs": {
-    "home": "Головна",
-    "sections": "Секції"
+    "home": "Огляд",
+    "sections": "Секції",
+    "profile": "Профіль"
   },
   "home": {
-    "title": "Головна",
+    "title": "Огляд",
     "logOut": "Вийти",
     "loggedInAs": "Ввійшли як",
-    "name": "Ім'я"
+    "name": "Ім'я",
+    "questionsAnswered": "Питань відповіли",
+    "accuracy": "Точність",
+    "testsCompleted": "Тестів пройдено",
+    "overallProgress": "Загальний прогрес",
+    "recommended": "Рекомендовані секції",
+    "topSections": "Топ секції",
+    "recentTests": "Останні тести",
+    "progress": "Прогрес",
+    "startTest": "Почати тест",
+    "startTestSubtitle": "Продовж навчання"
   },
   "onboarding": {
     "title": "Обери свою позицію",
@@ -87,7 +98,15 @@
     "previous": "Назад",
     "next": "Далі",
     "finish": "Завершити",
+    "submitting": "Збереження...",
     "loading": "Завантаження тесту...",
+    "generatingTitle": "Генеруємо тест…",
+    "generatingPhrases": [
+      "Готуємо питання…",
+      "Підбираємо варіанти…",
+      "Додаємо пояснення…",
+      "Майже готово…"
+    ],
     "error": "Не вдалося завантажити тест"
   },
   "testResults": {
@@ -105,5 +124,11 @@
     "incorrect": "Неправильних",
     "score": "Результат",
     "backToSections": "Повернутися до секцій"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "language": "Мова",
+    "english": "Англійська",
+    "ukrainian": "Українська"
   }
 }

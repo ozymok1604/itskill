@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "skillup-app",
+    "name": "ITSkill",
     "slug": "skillup-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.skillup.appname"
+      "bundleIdentifier": "com.skillup.appname",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -20,13 +21,15 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.skillup.appname"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-apple-authentication",
       "expo-router",
       [
         "expo-splash-screen",

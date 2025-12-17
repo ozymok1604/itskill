@@ -123,7 +123,8 @@ export const updateUserProfile = createAsyncThunk(
   ) => {
     try {
       const response = await apiService.updateUser(uid, data);
-      return response.user;
+      // API may return { user } or the user object directly depending on backend
+      return (response as any).user || response;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to update user");
     }

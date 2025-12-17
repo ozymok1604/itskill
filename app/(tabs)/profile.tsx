@@ -16,11 +16,7 @@ import { auth } from "@/src/firebase";
 import { logout } from "@/src/store/slices/authSlice";
 import { clearProfile } from "@/src/store/slices/userSlice";
 
-interface DrawerMenuProps {
-  onClose: () => void;
-}
-
-export function DrawerMenu({ onClose }: DrawerMenuProps) {
+export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -50,13 +46,11 @@ export function DrawerMenu({ onClose }: DrawerMenuProps) {
   const accuracyPercentage = profile?.questionsStats?.accuracyPercentage || 0;
 
   const handleSettings = () => {
-    onClose();
     router.push("/settings");
   };
 
   const handleLogout = async () => {
     try {
-      onClose();
       await signOut(auth);
       dispatch(logout());
       dispatch(clearProfile());
@@ -69,6 +63,7 @@ export function DrawerMenu({ onClose }: DrawerMenuProps) {
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -154,12 +149,13 @@ export function DrawerMenu({ onClose }: DrawerMenuProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: VSCodeColors.panel,
-    borderRightWidth: 1,
-    borderRightColor: VSCodeColors.border,
+    backgroundColor: VSCodeColors.background,
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     paddingTop: 60,
@@ -230,6 +226,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: VSCodeColors.border,
+    backgroundColor: VSCodeColors.background,
     gap: 12,
   },
   settingsButton: {
@@ -271,3 +268,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
+

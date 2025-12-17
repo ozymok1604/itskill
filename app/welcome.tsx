@@ -22,7 +22,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/firebase";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
 import { setUser } from "@/src/store/slices/authSlice";
-import { fetchUser } from "@/src/store/slices/userSlice";
+import { fetchUser, syncUser } from "@/src/store/slices/userSlice";
 
 import { LoginModal } from "@/src/components/LoginModal";
 
@@ -50,7 +50,7 @@ export default function WelcomeScreen() {
     responseType: "id_token",
   });
 
-  const fullText = "SkillUp●";
+  const fullText = "ITSkill●";
   const [typedText, setTypedText] = useState("");
 
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -123,9 +123,18 @@ export default function WelcomeScreen() {
 
       if (userCredential.user) {
         try {
+          // Спочатку синхронізуємо користувача (створюємо якщо не існує)
+          await dispatch(
+            syncUser({
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+            })
+          ).unwrap();
+          
+          // Потім завантажуємо повний профіль
           await dispatch(fetchUser(userCredential.user.uid)).unwrap();
         } catch (error) {
-          console.error("Failed to fetch user profile:", error);
+          console.error("Failed to sync/fetch user profile:", error);
         }
       }
 
@@ -159,12 +168,12 @@ export default function WelcomeScreen() {
           onPress={handleApple}
         />
 
-        <Button
+        {/* <Button
           type="white"
           title={t("welcome.continueWithGoogle")}
           icon={<GoogleIcon size={20} />}
           onPress={() => promptGoogle()}
-        />
+        /> */}
 
         <Button
           type="primary"

@@ -15,10 +15,10 @@ import { Redirect, useRouter } from "expo-router";
 import { VSCodeColors, Fonts, FontWeights } from "@/src/constants/theme";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
 import { getSections } from "@/src/store/slices/sectionsSlice";
+import { fetchUser } from "@/src/store/slices/userSlice";
+import { auth } from "@/src/firebase";
 import { clearTest, startStreaming, addQuestion, completeStreaming, setStreamingError } from "@/src/store/slices/testSlice";
 import { apiService } from "@/src/services/api";
-import { List } from "phosphor-react-native";
-import { useDrawer } from "@/src/contexts/DrawerContext";
 import { ProgressScale } from "@/src/components/ProgressScale";
 import { Button } from "@/src/components/Button";
 import { ActivityIndicator } from "react-native";
@@ -35,7 +35,6 @@ export default function SectionsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { openDrawer } = useDrawer();
   const { profile } = useAppSelector((state) => state.user);
   const { sections, isLoading, error } = useAppSelector(
     (state) => state.sections
@@ -60,10 +59,28 @@ export default function SectionsScreen() {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
   console.log(selectedSectionId, "selectedSectionId");
+  
+  // Завантажуємо профіль користувача при монтуванні
   useEffect(() => {
+    if (auth.currentUser?.uid) {
+      console.log("Fetching user profile on sections mount");
+      dispatch(fetchUser(auth.currentUser.uid));
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Завантажуємо секції тільки якщо є subposition та uid
+    // Це означає, що користувач вже пройшов onboarding
     if (profile?.subposition && profile?.uid) {
+      console.log("Loading sections for subposition:", profile.subposition, "uid:", profile.uid);
       // Передаємо uid для отримання прогресу користувача
       dispatch(getSections({ subpositionId: profile.subposition, uid: profile.uid }));
+    } else {
+      console.log("Sections not loaded - missing subposition or uid:", {
+        hasSubposition: !!profile?.subposition,
+        hasUid: !!profile?.uid,
+        profile: profile,
+      });
     }
   }, [dispatch, profile?.subposition, profile?.uid, profile?.sections]); // Додаємо profile?.sections для оновлення після зміни прогресу
 
@@ -155,9 +172,6 @@ export default function SectionsScreen() {
     if (!selectedSection) return;
 
     try {
-      // Очищаємо попередній тест
-      dispatch(clearTest());
-
       // Визначаємо номер тесту на основі прогресу секції
       // Якщо користувач пройшов 1 тест, наступний буде 2, і т.д.
       // Максимум 10 тестів на секцію
@@ -166,7 +180,12 @@ export default function SectionsScreen() {
       
       console.log(`📊 Starting test ${testNumber} for section ${selectedSectionId} (progress: ${currentProgress})`);
 
-      // Починаємо streaming генерацію тесту
+      // Переходимо на екран тесту одразу (питання будуть догружатися)
+      router.push("/test");
+
+      const streamWithRetry = async (attempt: number) => {
+        // Очищаємо попередній тест та стартуємо стрім заново
+        dispatch(clearTest());
       dispatch(startStreaming({
         testNumber,
         section: selectedSectionId,
@@ -175,10 +194,7 @@ export default function SectionsScreen() {
         level: profile.level || "",
       }));
 
-      // Переходимо на екран тесту одразу (питання будуть догружатися)
-      router.push("/test");
-
-      // Запускаємо streaming генерацію
+        try {
       await apiService.createTestStream(
         {
           position: profile.position || "",
@@ -186,26 +202,33 @@ export default function SectionsScreen() {
           level: profile.level || "",
           section: selectedSectionId,
           testNumber,
-          language: i18n.language || 'en', // Передаємо поточну мову з апки
+              language: i18n.language || "en", // Передаємо поточну мову з апки
         },
         (question) => {
           // Додаємо питання по мірі надходження
-          console.log(`📥 Received question from stream:`, {
-            id: question.id,
-            question: question.question?.substring(0, 50) + '...',
-            optionsCount: question.options?.length
-          });
           dispatch(addQuestion(question));
         },
         () => {
           // Завершення генерації
           dispatch(completeStreaming());
         },
-        (error) => {
-          // Помилка
-          dispatch(setStreamingError(error));
+            (err) => {
+              // SSE parse error will be handled via promise rejection/catch to allow retry
+              if (err === "SSE_PARSE_ERROR") return;
+              dispatch(setStreamingError(err));
+            }
+          );
+        } catch (e: any) {
+          const msg = e?.message || String(e);
+          if (msg === "SSE_PARSE_ERROR" && attempt < 2) {
+            console.log(`🔁 SSE parse error, regenerating test (attempt ${attempt + 2}/3)`);
+            return streamWithRetry(attempt + 1);
         }
-      );
+          dispatch(setStreamingError(msg || "Failed to create test"));
+        }
+      };
+
+      await streamWithRetry(0);
     } catch (error) {
       console.error("Failed to create test:", error);
       dispatch(setStreamingError(error instanceof Error ? error.message : "Failed to create test"));
@@ -305,17 +328,12 @@ export default function SectionsScreen() {
     );
   };
 
-  if (isLoading) {
+  // Показуємо лоадер тільки якщо ще немає секцій (перша завантаження)
+  // Якщо секції вже є - не показуємо лоадер при оновленні (щоб не було мигання)
+  if (isLoading && sections.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={openDrawer}
-            style={styles.menuButton}
-            activeOpacity={0.7}
-          >
-            <List size={24} color={VSCodeColors.textPrimary} weight="bold" />
-          </TouchableOpacity>
           <Text style={styles.title}>{t("sections.title")}</Text>
         </View>
         <View style={styles.loadingContainer}>
@@ -329,13 +347,6 @@ export default function SectionsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={openDrawer}
-            style={styles.menuButton}
-            activeOpacity={0.7}
-          >
-            <List size={24} color={VSCodeColors.textPrimary} weight="bold" />
-          </TouchableOpacity>
           <Text style={styles.title}>{t("sections.title")}</Text>
         </View>
         <View style={styles.errorContainer}>
@@ -349,13 +360,6 @@ export default function SectionsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={openDrawer}
-            style={styles.menuButton}
-            activeOpacity={0.7}
-          >
-            <List size={24} color={VSCodeColors.textPrimary} weight="bold" />
-          </TouchableOpacity>
           <Text style={styles.title}>{t("sections.title")}</Text>
         </View>
         <View style={styles.emptyContainer}>
@@ -368,13 +372,6 @@ export default function SectionsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={openDrawer}
-          style={styles.menuButton}
-          activeOpacity={0.7}
-        >
-          <List size={24} color={VSCodeColors.textPrimary} weight="bold" />
-        </TouchableOpacity>
         <Text style={styles.title}>{t("sections.title")}</Text>
       </View>
 
@@ -433,13 +430,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     gap: 12,
   },
-  menuButton: {
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: VSCodeColors.surface,
-    borderWidth: 1,
-    borderColor: VSCodeColors.border,
-  },
   title: {
     fontSize: 32,
     fontWeight: FontWeights.bold,
@@ -475,6 +465,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sectionCardSelected: {
+    borderWidth: 2,
+    borderColor: VSCodeColors.accent,
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: {
@@ -489,13 +481,6 @@ const styles = StyleSheet.create({
   sectionCardWithProgress: {
     borderLeftWidth: 3,
     borderLeftColor: VSCodeColors.accent,
-  },
-  sectionCardSelected: {
-    borderWidth: 2,
-    borderColor: VSCodeColors.accent,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
   testButtonContainer: {
     position: "absolute",

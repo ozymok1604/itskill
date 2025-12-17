@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,22 @@ import { fetchUser } from "@/src/store/slices/userSlice";
 import { getSections } from "@/src/store/slices/sectionsSlice";
 import { auth } from "@/src/firebase";
 
+// Lottie loading animation (optional)
+let LottieView: any = null;
+let hasCodingFile = false;
+try {
+  const lottie = require("lottie-react-native");
+  LottieView = lottie.default || lottie;
+  try {
+    require("@/assets/Coding.json");
+    hasCodingFile = true;
+  } catch (e) {
+    console.log("Coding JSON file not found");
+  }
+} catch (e) {
+  console.log("Lottie not available");
+}
+
 export default function TestScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -29,12 +45,36 @@ export default function TestScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(30); // 30 секунд для тестування
+  const [timeLeft, setTimeLeft] = useState(600); // 30 секунд для тестування
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const timerBlinkAnim = useRef(new Animated.Value(1)).current;
 
   const questions = test?.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
+  const isGenerating = (isLoading || isStreaming) && questions.length === 0;
+
+  const generatingPhrases = useMemo(() => {
+    const raw = t("test.generatingPhrases", { returnObjects: true }) as unknown;
+    if (Array.isArray(raw) && raw.every((x) => typeof x === "string")) {
+      return raw as string[];
+    }
+    return [
+      t("test.loading"),
+    ];
+  }, [t]);
+
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  useEffect(() => {
+    if (!isGenerating || generatingPhrases.length <= 1) {
+      setPhraseIndex(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % generatingPhrases.length);
+    }, 2200);
+    return () => clearInterval(id);
+  }, [isGenerating, generatingPhrases.length]);
   
   // Діагностичне логування
   useEffect(() => {
@@ -86,7 +126,7 @@ export default function TestScreen() {
     if (!test || isTimeUp) return;
 
     // Скидаємо таймер при новому тесті
-    setTimeLeft(30);
+    setTimeLeft(600);
     setIsTimeUp(false);
 
     const interval = setInterval(() => {
@@ -176,11 +216,16 @@ export default function TestScreen() {
   };
 
   const handleFinish = async () => {
+    // Запобігаємо повторним натисканням
+    if (isSubmitting) return;
+    
     if (!test || !auth.currentUser) {
       dispatch(clearTest());
       router.back();
       return;
     }
+
+    setIsSubmitting(true);
 
     // Підраховуємо правильні відповіді (виносимо перед try, щоб були доступні поза блоком)
     let correctCount = 0;
@@ -212,17 +257,17 @@ export default function TestScreen() {
         testNumber: test.testNumber,
       });
 
-      // Оновлюємо профіль користувача
-      const updatedProfileResponse = await dispatch(fetchUser(auth.currentUser.uid)).unwrap();
-      const updatedProfile = updatedProfileResponse?.user || updatedProfileResponse;
-      
-      // Оновлюємо секції, щоб відобразити новий прогрес
-      if (updatedProfile?.subposition && updatedProfile?.uid) {
-        await dispatch(getSections({ 
-          subpositionId: updatedProfile.subposition, 
-          uid: updatedProfile.uid 
-        }));
-      }
+      // Оновлюємо профіль користувача (без await для швидшої навігації)
+      dispatch(fetchUser(auth.currentUser.uid)).then((action) => {
+        const updatedProfile = action.payload?.user || action.payload;
+        // Оновлюємо секції у фоні
+        if (updatedProfile?.subposition && updatedProfile?.uid) {
+          dispatch(getSections({ 
+            subpositionId: updatedProfile.subposition, 
+            uid: updatedProfile.uid 
+          }));
+        }
+      });
 
       console.log("✅ Test results submitted successfully");
     } catch (error) {
@@ -248,18 +293,31 @@ export default function TestScreen() {
     // Очищаємо тест після невеликої затримки, щоб перехід встиг відбутися
     setTimeout(() => {
       dispatch(clearTest());
+      setIsSubmitting(false);
     }, 100);
   };
 
   const isCorrect = currentQuestion ? selectedAnswer === currentQuestion.correctAnswer : false;
   const showResult = hasAnswered && showExplanation;
 
-  if (isLoading) {
+  if (isGenerating) {
     return (
       <SafeAreaView edges={["top"]} style={styles.container}>
-        <View style={styles.loadingContainer}>
+        <View style={styles.generatingContainer}>
+          {LottieView && hasCodingFile ? (
+            <LottieView
+              source={require("@/assets/Coding.json")}
+              autoPlay
+              loop
+              style={styles.codingLottie}
+            />
+          ) : (
           <ActivityIndicator size="large" color={VSCodeColors.accent} />
-          <Text style={styles.loadingText}>{t("test.loading")}</Text>
+          )}
+          <Text style={styles.generatingTitle}>{t("test.generatingTitle")}</Text>
+          <Text style={styles.generatingSubtitle}>
+            {generatingPhrases[Math.min(phraseIndex, generatingPhrases.length - 1)]}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -291,8 +349,9 @@ export default function TestScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.backButton}
+          style={[styles.backButton, isSubmitting && { opacity: 0.5 }]}
           activeOpacity={0.7}
+          disabled={isSubmitting}
         >
           <ArrowLeft size={24} color={VSCodeColors.textPrimary} weight="bold" />
         </TouchableOpacity>
@@ -334,34 +393,38 @@ export default function TestScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {!currentQuestion && isStreaming ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={VSCodeColors.accent} />
-            <Text style={styles.loadingText}>
-              {questions.length > 0 
-                ? `Генеруємо питання ${questions.length + 1}/10...`
-                : "Генеруємо перше питання..."}
-            </Text>
-            <Text style={[styles.loadingText, { fontSize: 12, marginTop: 8 }]}>
-              Завантажено: {questions.length}/10
-            </Text>
-          </View>
-        ) : currentQuestion ? (
+        {currentQuestion ? (
           <View style={styles.questionContainer}>
-            <Text style={styles.questionText}>{currentQuestion.question}</Text>
+            <Text style={styles.questionText}>
+              {typeof currentQuestion.question === "string" 
+                ? currentQuestion.question 
+                : String(currentQuestion.question || "Question")}
+            </Text>
 
-          {currentQuestion.code && (
+          {currentQuestion.code && typeof currentQuestion.code === "string" && (
             <View style={styles.codeBlock}>
               <Text style={styles.codeText}>{currentQuestion.code}</Text>
             </View>
           )}
 
           <View style={styles.optionsContainer}>
-            {currentQuestion.options.map((option) => {
+            {(Array.isArray(currentQuestion.options) ? currentQuestion.options : []).map((option) => {
               const isSelected = selectedAnswer === option.id;
               const isCorrectOption = option.id === currentQuestion.correctAnswer;
               const showCorrect = showResult && isCorrectOption;
               const showIncorrect = showResult && isSelected && !isCorrectOption;
+              const optionText =
+                typeof option.text === "string"
+                  ? option.text
+                  : option.text == null
+                    ? ""
+                    : (() => {
+                        try {
+                          return JSON.stringify(option.text);
+                        } catch {
+                          return "[invalid]";
+                        }
+                      })();
 
               return (
                 <TouchableOpacity
@@ -380,7 +443,9 @@ export default function TestScreen() {
                     <View style={styles.optionLabel}>
                       <Text style={styles.optionLabelText}>{option.id}</Text>
                     </View>
-                    <Text style={styles.optionText} numberOfLines={3}>{option.text}</Text>
+                    <Text style={styles.optionText} numberOfLines={3}>
+                      {optionText}
+                    </Text>
                   </View>
                   <View style={styles.optionIconContainer}>
                     {showCorrect && (
@@ -403,7 +468,7 @@ export default function TestScreen() {
             })}
           </View>
 
-          {showResult && currentQuestion.explanation && (
+          {showResult && currentQuestion.explanation && typeof currentQuestion.explanation === "string" && (
             <View
               style={[
                 styles.explanationContainer,
@@ -435,16 +500,16 @@ export default function TestScreen() {
         <TouchableOpacity
           style={[
             styles.navButton,
-            currentQuestionIndex === 0 && styles.navButtonDisabled,
+            (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonDisabled,
           ]}
           onPress={handlePrevious}
-          disabled={currentQuestionIndex === 0}
+          disabled={currentQuestionIndex === 0 || isSubmitting}
           activeOpacity={0.7}
         >
           <Text
             style={[
               styles.navButtonText,
-              currentQuestionIndex === 0 && styles.navButtonTextDisabled,
+              (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonTextDisabled,
             ]}
           >
             {t("test.previous")}
@@ -455,21 +520,30 @@ export default function TestScreen() {
           style={[
             styles.navButton,
             styles.navButtonPrimary,
-            !hasAnswered && styles.navButtonDisabled,
+            (!hasAnswered || isSubmitting) && styles.navButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={!hasAnswered}
+          disabled={!hasAnswered || isSubmitting}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.navButtonText,
-              styles.navButtonTextPrimary,
-              !hasAnswered && styles.navButtonTextDisabled,
-            ]}
-          >
-            {isLastQuestion ? t("test.finish") : t("test.next")}
-          </Text>
+          {isSubmitting ? (
+            <View style={styles.submitLoadingContainer}>
+              <ActivityIndicator size="small" color={VSCodeColors.textPrimary} />
+              <Text style={[styles.navButtonText, styles.navButtonTextPrimary]}>
+                {t("test.submitting") || "..."}
+              </Text>
+            </View>
+          ) : (
+            <Text
+              style={[
+                styles.navButtonText,
+                styles.navButtonTextPrimary,
+                !hasAnswered && styles.navButtonTextDisabled,
+              ]}
+            >
+              {isLastQuestion ? t("test.finish") : t("test.next")}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -480,6 +554,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: VSCodeColors.background,
+  },
+  generatingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    gap: 14,
+  },
+  codingLottie: {
+    width: 220,
+    height: 220,
+  },
+  generatingTitle: {
+    fontSize: 18,
+    fontWeight: FontWeights.bold,
+    color: VSCodeColors.textPrimary,
+    fontFamily: Fonts?.mono || "monospace",
+    textAlign: "center",
+  },
+  generatingSubtitle: {
+    fontSize: 14,
+    color: VSCodeColors.textSecondary,
+    fontFamily: Fonts?.sans || "system",
+    textAlign: "center",
+    lineHeight: 20,
   },
   header: {
     flexDirection: "row",
@@ -700,6 +799,11 @@ const styles = StyleSheet.create({
   },
   navButtonTextDisabled: {
     color: VSCodeColors.textMuted,
+  },
+  submitLoadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   loadingContainer: {
     flex: 1,

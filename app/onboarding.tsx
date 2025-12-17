@@ -18,6 +18,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/src/components/Button";
 import { ArrowLeft } from "phosphor-react-native";
+import { signOut } from "firebase/auth";
+import { auth } from "@/src/firebase";
 
 const accentColors = [
   Colors.accent, // blue
@@ -33,6 +35,7 @@ export default function OnboardingScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  
   useEffect(() => {
     dispatch(getPositions());
   }, [dispatch]);
@@ -65,6 +68,10 @@ export default function OnboardingScreen() {
     setSelectedSubposition("");
   };
 
+  useEffect(()=>{
+      signOut(auth);
+  },[])
+
   const handleNext = () => {
     if (step === "position") {
       if (subpositions.length > 0) {
@@ -78,6 +85,8 @@ export default function OnboardingScreen() {
       handleFinish();
     }
   };
+
+  
 
   const handleFinish = async () => {
     if (!profile?.uid) {

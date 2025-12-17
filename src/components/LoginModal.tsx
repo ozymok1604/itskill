@@ -6,6 +6,10 @@ import {
   Modal,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Keyboard,
 } from "react-native";
 
 import { Input } from "@/src/components/Input";
@@ -134,6 +138,14 @@ export function LoginModal({ visible, onClose }: Props) {
       console.log("User synced:", syncedUser);
       console.log("Synced user position:", syncedUser?.user?.position || syncedUser?.position);
 
+      // Оновлюємо профіль після синхронізації, щоб отримати всі дані
+      try {
+        await dispatch(fetchUser(cred.user.uid)).unwrap();
+        console.log("User profile fetched after sync");
+      } catch (error) {
+        console.error("Failed to fetch user profile after sync:", error);
+      }
+
       Alert.alert(t("login.success"), t("login.accountCreated"));
       onClose();
     } catch (err: any) {
@@ -166,9 +178,18 @@ export function LoginModal({ visible, onClose }: Props) {
       
       if (userCredential.user) {
         try {
+          // Спочатку синхронізуємо користувача (створюємо якщо не існує)
+          await dispatch(
+            syncUser({
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+            })
+          ).unwrap();
+          
+          // Потім завантажуємо повний профіль
           await dispatch(fetchUser(userCredential.user.uid)).unwrap();
         } catch (error) {
-          console.error("Failed to fetch user profile:", error);
+          console.error("Failed to sync/fetch user profile:", error);
         }
       }
       
@@ -181,20 +202,40 @@ export function LoginModal({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.overlay} onPress={onClose} />
+      <View style={styles.root}>
+        <Pressable
+          style={styles.overlay}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
+        />
 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+          style={styles.kav}
+        >
       <View style={styles.modal}>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <Text style={styles.close}>✕</Text>
         </TouchableOpacity>
 
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.modalContent}
+            >
         <View style={styles.tabs}>
           <TouchableOpacity
             onPress={() => setMode("login")}
             style={[styles.tab, mode === "login" && styles.tabActive]}
           >
             <Text
-              style={[styles.tabText, mode === "login" && styles.tabTextActive]}
+                    style={[
+                      styles.tabText,
+                      mode === "login" && styles.tabTextActive,
+                    ]}
             >
               {t("login.logIn")}
             </Text>
@@ -230,7 +271,9 @@ export function LoginModal({ visible, onClose }: Props) {
         />
 
         <Button
-          title={mode === "login" ? t("login.logIn") : t("login.createAccount")}
+                title={
+                  mode === "login" ? t("login.logIn") : t("login.createAccount")
+                }
           onPress={mode === "login" ? handleLogin : handleSignup}
           disabled={!formValid}
         />
@@ -249,25 +292,38 @@ export function LoginModal({ visible, onClose }: Props) {
         />
 
         <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                buttonType={
+                  AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                }
+                buttonStyle={
+                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
           cornerRadius={12}
           style={{ width: "100%", height: 50 }}
           onPress={handleApple}
         />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 const styles = StyleSheet.create({
-  overlay: {
+  root: {
     flex: 1,
+    justifyContent: "flex-end",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.75)",
+  },
+  kav: {
+    width: "100%",
+    justifyContent: "flex-end",
   },
 
   modal: {
-    position: "absolute",
-    bottom: 0,
     width: "100%",
     padding: 28,
     paddingTop: 60,
@@ -277,6 +333,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: VSCodeColors.border,
     borderBottomWidth: 0,
+  },
+  modalContent: {
+    paddingBottom: 24,
     gap: 20,
   },
 

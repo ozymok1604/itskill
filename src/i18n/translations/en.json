@@ -33,14 +33,25 @@
     "emailAlreadyInUse": "This email is already in use. Please log in."
   },
   "tabs": {
-    "home": "Home",
-    "sections": "Sections"
+    "home": "Overview",
+    "sections": "Sections",
+    "profile": "Profile"
   },
   "home": {
-    "title": "Home",
+    "title": "Overview",
     "logOut": "Log out",
     "loggedInAs": "Logged in as",
-    "name": "Name"
+    "name": "Name",
+    "questionsAnswered": "Questions Answered",
+    "accuracy": "Accuracy",
+    "testsCompleted": "Tests Completed",
+    "overallProgress": "Overall Progress",
+    "recommended": "Recommended Sections",
+    "topSections": "Top Sections",
+    "recentTests": "Recent Tests",
+    "progress": "Progress",
+    "startTest": "Start Test",
+    "startTestSubtitle": "Continue learning"
   },
   "onboarding": {
     "title": "Choose your position",
@@ -87,7 +98,15 @@
     "previous": "Previous",
     "next": "Next",
     "finish": "Finish",
+    "submitting": "Saving...",
     "loading": "Loading test...",
+    "generatingTitle": "Generating your test…",
+    "generatingPhrases": [
+      "Preparing questions…",
+      "Picking the best options…",
+      "Adding explanations…",
+      "Almost ready…"
+    ],
     "error": "Failed to load test"
   },
   "testResults": {
@@ -105,5 +124,11 @@
     "incorrect": "Incorrect",
     "score": "Score",
     "backToSections": "Back to Sections"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "english": "English",
+    "ukrainian": "Ukrainian"
   }
 }
