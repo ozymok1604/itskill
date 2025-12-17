@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { VSCodeColors, Fonts, FontWeights } from "@/src/constants/theme";
@@ -116,11 +117,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t("home.title")}</Text>
-      </View>
-
+    <SafeAreaView edges={["top"]} style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -278,7 +275,7 @@ export default function HomeScreen() {
           <ArrowRight size={24} color={VSCodeColors.accent} />
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

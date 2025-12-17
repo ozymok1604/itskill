@@ -98,6 +98,7 @@
     "previous": "Previous",
     "next": "Next",
     "finish": "Finish",
+    "confirm": "Confirm Answer",
     "submitting": "Saving...",
     "loading": "Loading test...",
     "generatingTitle": "Generating your test…",

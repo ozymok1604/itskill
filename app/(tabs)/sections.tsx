@@ -10,6 +10,7 @@ import {
   Platform,
   UIManager,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Redirect, useRouter } from "expo-router";
 import { VSCodeColors, Fonts, FontWeights } from "@/src/constants/theme";
@@ -332,49 +333,36 @@ export default function SectionsScreen() {
   // Якщо секції вже є - не показуємо лоадер при оновленні (щоб не було мигання)
   if (isLoading && sections.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t("sections.title")}</Text>
-        </View>
+      <SafeAreaView edges={["top"]} style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>{t("sections.loading")}</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t("sections.title")}</Text>
-        </View>
+      <SafeAreaView edges={["top"]} style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!profile?.subposition) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t("sections.title")}</Text>
-        </View>
+      <SafeAreaView edges={["top"]} style={styles.container}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t("sections.noSubposition")}</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t("sections.title")}</Text>
-      </View>
-
+    <SafeAreaView edges={["top"]} style={styles.container}>
       {sections?.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t("sections.empty")}</Text>
@@ -413,7 +401,7 @@ export default function SectionsScreen() {
           )}
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

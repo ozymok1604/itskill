@@ -10,7 +10,7 @@
 //
 // Example:
 // EXPO_PUBLIC_API_BASE_URL="https://skillup-backend-bizu.onrender.com/api"
-const API_BASE_URL = 'http://192.168.0.100:4000/api'
+const API_BASE_URL = 'https://skillup-backend-bizu.onrender.com/api'
 
 export interface ApiError {
   message: string;

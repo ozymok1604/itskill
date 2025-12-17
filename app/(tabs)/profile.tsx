@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
@@ -60,16 +61,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t("drawer.profile")}</Text>
-        </View>
-
         <View style={styles.section}>
           <View style={styles.infoRow}>
             <Text style={styles.label}>{t("drawer.email")}</Text>
@@ -142,7 +139,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>{t("drawer.logOut")}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

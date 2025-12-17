@@ -43,9 +43,10 @@ export default function TestScreen() {
   const { test, isLoading, isStreaming, error } = useAppSelector((state) => state.test);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isAnswerConfirmed, setIsAnswerConfirmed] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(600); // 30 секунд для тестування
+  const [timeLeft, setTimeLeft] = useState(600); // 10 хвилин
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const timerBlinkAnim = useRef(new Animated.Value(1)).current;
@@ -85,7 +86,8 @@ export default function TestScreen() {
   const totalQuestions = 10;
   const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
   const isLastQuestion = !isStreaming && currentQuestionIndex === questions.length - 1 && questions.length === totalQuestions;
-  const hasAnswered = selectedAnswer !== null;
+  const hasSelected = selectedAnswer !== null;
+  const hasAnswered = isAnswerConfirmed; // Answer is "answered" only after confirmation
 
   // Використовуємо ref для відстеження чи тест вже ініціалізований
   const testInitializedRef = useRef(false);
@@ -102,6 +104,7 @@ export default function TestScreen() {
       // Скидаємо стейт тільки для нового тесту
       setCurrentQuestionIndex(0);
       setSelectedAnswer(null);
+      setIsAnswerConfirmed(false);
       setShowExplanation(false);
       setAnswers({});
     }
@@ -181,13 +184,21 @@ export default function TestScreen() {
   }, [isTimeUp, test, auth.currentUser, isLoading]);
 
   const handleAnswerSelect = (optionId: string) => {
-    if (hasAnswered) return;
+    // Don't allow changing answer after confirmation
+    if (isAnswerConfirmed) return;
     
     setSelectedAnswer(optionId);
+  };
+
+  const handleConfirmAnswer = () => {
+    if (!selectedAnswer || isAnswerConfirmed) return;
+    
+    // Save the answer
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: optionId,
+      [currentQuestion.id]: selectedAnswer,
     }));
+    setIsAnswerConfirmed(true);
     setShowExplanation(true);
   };
 
@@ -201,8 +212,10 @@ export default function TestScreen() {
     const nextQuestion = questions[nextIndex];
     setCurrentQuestionIndex(nextIndex);
     // Відновлюємо відповідь зі збережених, якщо вона є
-    setSelectedAnswer(nextQuestion ? answers[nextQuestion.id] || null : null);
-    setShowExplanation(nextQuestion ? !!answers[nextQuestion.id] : false);
+    const savedAnswer = nextQuestion ? answers[nextQuestion.id] || null : null;
+    setSelectedAnswer(savedAnswer);
+    setIsAnswerConfirmed(!!savedAnswer); // If already answered, mark as confirmed
+    setShowExplanation(!!savedAnswer);
   };
 
   const handlePrevious = () => {
@@ -211,8 +224,10 @@ export default function TestScreen() {
     const prevIndex = currentQuestionIndex - 1;
     const prevQuestion = questions[prevIndex];
     setCurrentQuestionIndex(prevIndex);
-    setSelectedAnswer(prevQuestion ? answers[prevQuestion.id] || null : null);
-    setShowExplanation(prevQuestion ? !!answers[prevQuestion.id] : false);
+    const savedAnswer = prevQuestion ? answers[prevQuestion.id] || null : null;
+    setSelectedAnswer(savedAnswer);
+    setIsAnswerConfirmed(!!savedAnswer); // If already answered, mark as confirmed
+    setShowExplanation(!!savedAnswer);
   };
 
   const handleFinish = async () => {
@@ -497,54 +512,69 @@ export default function TestScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonDisabled,
-          ]}
-          onPress={handlePrevious}
-          disabled={currentQuestionIndex === 0 || isSubmitting}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.navButtonText,
-              (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonTextDisabled,
-            ]}
+        {/* Show Confirm button when answer selected but not confirmed */}
+        {hasSelected && !isAnswerConfirmed ? (
+          <TouchableOpacity
+            style={[styles.confirmButton]}
+            onPress={handleConfirmAnswer}
+            activeOpacity={0.7}
           >
-            {t("test.previous")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            styles.navButtonPrimary,
-            (!hasAnswered || isSubmitting) && styles.navButtonDisabled,
-          ]}
-          onPress={handleNext}
-          disabled={!hasAnswered || isSubmitting}
-          activeOpacity={0.7}
-        >
-          {isSubmitting ? (
-            <View style={styles.submitLoadingContainer}>
-              <ActivityIndicator size="small" color={VSCodeColors.textPrimary} />
-              <Text style={[styles.navButtonText, styles.navButtonTextPrimary]}>
-                {t("test.submitting") || "..."}
-              </Text>
-            </View>
-          ) : (
-            <Text
-              style={[
-                styles.navButtonText,
-                styles.navButtonTextPrimary,
-                !hasAnswered && styles.navButtonTextDisabled,
-              ]}
-            >
-              {isLastQuestion ? t("test.finish") : t("test.next")}
+            <Text style={styles.confirmButtonText}>
+              {t("test.confirm")}
             </Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonDisabled,
+              ]}
+              onPress={handlePrevious}
+              disabled={currentQuestionIndex === 0 || isSubmitting}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.navButtonText,
+                  (currentQuestionIndex === 0 || isSubmitting) && styles.navButtonTextDisabled,
+                ]}
+              >
+                {t("test.previous")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                styles.navButtonPrimary,
+                (!hasAnswered || isSubmitting) && styles.navButtonDisabled,
+              ]}
+              onPress={handleNext}
+              disabled={!hasAnswered || isSubmitting}
+              activeOpacity={0.7}
+            >
+              {isSubmitting ? (
+                <View style={styles.submitLoadingContainer}>
+                  <ActivityIndicator size="small" color={VSCodeColors.textPrimary} />
+                  <Text style={[styles.navButtonText, styles.navButtonTextPrimary]}>
+                    {t("test.submitting") || "..."}
+                  </Text>
+                </View>
+              ) : (
+                <Text
+                  style={[
+                    styles.navButtonText,
+                    styles.navButtonTextPrimary,
+                    !hasAnswered && styles.navButtonTextDisabled,
+                  ]}
+                >
+                  {isLastQuestion ? t("test.finish") : t("test.next")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -784,6 +814,20 @@ const styles = StyleSheet.create({
   navButtonPrimary: {
     backgroundColor: VSCodeColors.accent,
     borderColor: VSCodeColors.accent,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 16,
+    backgroundColor: VSCodeColors.accent,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: FontWeights.bold,
+    color: VSCodeColors.textPrimary,
+    fontFamily: Fonts?.mono || "monospace",
   },
   navButtonDisabled: {
     opacity: 0.5,
