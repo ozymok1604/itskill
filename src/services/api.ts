@@ -91,9 +91,18 @@ class ApiService {
   }
 
   async deleteUser(uid: string) {
-    return this.request<{ success: boolean; message: string }>(`/users/${uid}`, {
-      method: "DELETE",
-    });
+    try {
+      return await this.request<{ success: boolean; message: string }>(
+        `/users/${uid}`,
+        { method: "DELETE" }
+      );
+    } catch (e: any) {
+      // Idempotent delete: if backend says user is missing, treat it as success.
+      if (e && typeof e === "object" && (e as any).status === 404) {
+        return { success: true, message: "User already deleted" };
+      }
+      throw e;
+    }
   }
 
   // Add more API methods as needed

@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
@@ -83,7 +82,7 @@ export function LoginModal({ visible, onClose }: Props) {
           }
           onClose();
         })
-        .catch((err) => Alert.alert(t("login.googleError"), err.message));
+        .catch((err) => console.error("Google sign in error:", err.message));
     }
   }, [res, dispatch]);
 
@@ -113,7 +112,8 @@ export function LoginModal({ visible, onClose }: Props) {
         setEmailError(t("login.incorrectCredentials"));
         setPasswordError(t("login.incorrectCredentials"));
       } else {
-        Alert.alert(t("login.loginError"), err.message);
+        console.error("Login error:", err.message);
+        setEmailError(err.message);
       }
     }
   };
@@ -146,14 +146,14 @@ export function LoginModal({ visible, onClose }: Props) {
         console.error("Failed to fetch user profile after sync:", error);
       }
 
-      Alert.alert(t("login.success"), t("login.accountCreated"));
       onClose();
     } catch (err: any) {
       if (err.code === "auth/email-already-in-use") {
         setMode("login");
         setEmailError(t("login.emailAlreadyInUse"));
       } else {
-        Alert.alert(t("login.signupError"), err.message);
+        console.error("Signup error:", err.message);
+        setEmailError(err.message);
       }
     }
   };
@@ -195,8 +195,9 @@ export function LoginModal({ visible, onClose }: Props) {
       
       onClose();
     } catch (err: any) {
-      if (err.code !== "ERR_CANCELED")
-        Alert.alert(t("login.appleError"), err.message);
+      if (err.code !== "ERR_CANCELED") {
+        console.error("Apple sign in error:", err.message);
+      }
     }
   };
 

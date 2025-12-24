@@ -1,5 +1,10 @@
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
-import { getPositions, updateUserProfile } from "@/src/store/slices/userSlice";
+import {
+  getPositions,
+  updateUserProfile,
+  syncUser,
+  fetchUser,
+} from "@/src/store/slices/userSlice";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -18,7 +23,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/src/components/Button";
 import { ArrowLeft } from "phosphor-react-native";
-import { signOut } from "firebase/auth";
 import { auth } from "@/src/firebase";
 
 const accentColors = [
@@ -68,10 +72,6 @@ export default function OnboardingScreen() {
     setSelectedSubposition("");
   };
 
-  useEffect(()=>{
-      signOut(auth);
-  },[])
-
   const handleNext = () => {
     if (step === "position") {
       if (subpositions.length > 0) {
@@ -89,12 +89,23 @@ export default function OnboardingScreen() {
   
 
   const handleFinish = async () => {
-    if (!profile?.uid) {
+    const uid = auth.currentUser?.uid || profile?.uid;
+    const email = auth.currentUser?.email ?? null;
+    if (!uid) {
       console.error("User UID not found");
       return;
     }
 
     try {
+      // Ensure backend user exists (idempotent)
+      try {
+        await dispatch(syncUser({ uid, email })).unwrap();
+      } catch (e) {
+        // If sync fails (e.g. missing email for a brand-new Apple user), we still try to proceed,
+        // but updateUserProfile may fail if backend doesn't know this uid yet.
+        console.log("syncUser failed (continuing):", e);
+      }
+
       const updateData: {
         position: string;
         subposition?: string;
@@ -110,11 +121,13 @@ export default function OnboardingScreen() {
 
       await dispatch(
         updateUserProfile({
-          uid: profile.uid,
+          uid,
           data: updateData,
         })
       ).unwrap();
 
+      // Refresh profile state after onboarding
+      dispatch(fetchUser(uid));
       router.replace("/(tabs)");
     } catch (error: any) {
       console.error("Failed to update user profile:", error);

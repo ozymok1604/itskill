@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
 import { setUser, setLoading } from "@/src/store/slices/authSlice";
 import {
   fetchUser,
+  syncUser,
   clearProfile,
   getPositions,
 } from "@/src/store/slices/userSlice";
@@ -51,10 +52,28 @@ export default function Index() {
           console.log("User profile fetched:", result);
           loadedProfileUidRef.current = user.uid;
         } catch (error) {
-          console.log(
-            "User not found in backend, will redirect to onboarding:",
-            error
-          );
+          // Important:
+          // - Do NOT log out Firebase user just because backend profile isn't available.
+          // - Try to sync/create the backend user, then refetch.
+          const msg = String(error ?? "");
+          console.log("Failed to fetch user profile:", msg);
+
+          const looksLikeMissingUser =
+            msg.toLowerCase().includes("user not found");
+
+          if (looksLikeMissingUser) {
+            try {
+              await dispatch(
+                syncUser({ uid: user.uid, email: user.email })
+              ).unwrap();
+              const result = await dispatch(fetchUser(user.uid)).unwrap();
+              console.log("User profile fetched after sync:", result);
+              loadedProfileUidRef.current = user.uid;
+              return;
+            } catch (syncErr) {
+              console.log("Sync+refetch failed, will stay authenticated:", syncErr);
+            }
+          }
           loadedProfileUidRef.current = null;
         }
       } else {
@@ -65,6 +84,11 @@ export default function Index() {
 
     return () => unsubscribe();
   }, [dispatch]);
+
+  // NOTE:
+  // We intentionally do NOT auto-logout when backend says "User not found".
+  // This can happen due to transient backend issues or a missing profile,
+  // and logging out forces the user to re-auth unnecessarily.
 
   useEffect(() => {
     if (profile?.uid) {

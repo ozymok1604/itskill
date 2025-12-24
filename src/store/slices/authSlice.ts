@@ -16,7 +16,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start with loading=true to wait for Firebase auth check
   error: null,
 };
 

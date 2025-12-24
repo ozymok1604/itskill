@@ -5,8 +5,6 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  Alert,
-  ActivityIndicator,
 } from "react-native";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
 
@@ -21,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/firebase";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
-import { setUser } from "@/src/store/slices/authSlice";
+import { setUser, setLoading } from "@/src/store/slices/authSlice";
 import { fetchUser, syncUser } from "@/src/store/slices/userSlice";
 
 import { LoginModal } from "@/src/components/LoginModal";
@@ -55,9 +53,11 @@ export default function WelcomeScreen() {
 
   const slideAnim = useRef(new Animated.Value(300)).current;
 
+  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       dispatch(setUser(user));
+      dispatch(setLoading(false));
     });
     return () => unsubscribe();
   }, [dispatch]);
@@ -76,9 +76,8 @@ export default function WelcomeScreen() {
               console.error("Failed to fetch user profile:", error);
             }
           }
-          Alert.alert(t("welcome.loggedIn"), t("welcome.googleLoginSuccess"));
         })
-        .catch((err) => Alert.alert(t("welcome.googleError"), err.message));
+        .catch((err) => console.error("Google sign in error:", err.message));
     }
   }, [response, dispatch]);
 
@@ -138,10 +137,9 @@ export default function WelcomeScreen() {
         }
       }
 
-      Alert.alert(t("welcome.loggedIn"), t("welcome.appleLoginSuccess"));
     } catch (err: any) {
       if (err.code === "ERR_CANCELED") return;
-      Alert.alert(t("welcome.appleError"), err.message);
+      console.error("Apple sign in error:", err.message);
     }
   };
 

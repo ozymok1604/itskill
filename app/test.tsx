@@ -235,8 +235,7 @@ export default function TestScreen() {
     if (isSubmitting) return;
     
     if (!test || !auth.currentUser) {
-      dispatch(clearTest());
-      router.back();
+      console.warn("⚠️ handleFinish called but test or user is missing");
       return;
     }
 
@@ -294,22 +293,19 @@ export default function TestScreen() {
     console.log("🔄 Navigating to test results screen...");
     console.log("📊 Results:", { correctCount, totalQuestions, scorePercentage });
     
+    setIsSubmitting(false);
+    
     // Використовуємо replace замість push, щоб не можна було повернутися назад
+    // НЕ очищаємо тест тут — він очиститься при старті нового тесту
     router.replace({
       pathname: "/test-results",
       params: {
         correctAnswers: correctCount.toString(),
         totalQuestions: totalQuestions.toString(),
         scorePercentage: scorePercentage.toString(),
-        timeUp: isTimeUp ? "true" : "false", // Передаємо інформацію про те, що час вийшов
+        timeUp: isTimeUp ? "true" : "false",
       },
     });
-    
-    // Очищаємо тест після невеликої затримки, щоб перехід встиг відбутися
-    setTimeout(() => {
-      dispatch(clearTest());
-      setIsSubmitting(false);
-    }, 100);
   };
 
   const isCorrect = currentQuestion ? selectedAnswer === currentQuestion.correctAnswer : false;

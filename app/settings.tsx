@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
-  Alert,
   TextInput,
   Keyboard,
   KeyboardAvoidingView,
@@ -24,6 +23,7 @@ import {
   OAuthProvider,
   GoogleAuthProvider,
   signInWithCredential,
+  signOut,
 } from "firebase/auth";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Google from "expo-auth-session/providers/google";
@@ -107,9 +107,50 @@ export default function SettingsScreen() {
     await i18n.changeLanguage(lang);
   }, []);
 
+  // Perform the actual deletion - defined first so other functions can use it
+  const performDelete = useCallback(async () => {
+    // Get fresh user reference for deletion
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("User not logged in");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // 1. Try to delete user data from backend (MongoDB) - ignore if not found
+      try {
+        await apiService.deleteUser(user.uid);
+      } catch (backendError: any) {
+        console.log("Backend delete (ignoring):", backendError.message);
+      }
+
+      // 2. Delete user from Firebase Auth
+      await user.delete();
+    } catch (error: any) {
+      console.error("Firebase delete error:", error);
+    }
+
+    // 2.5 Ensure local Firebase session is cleared (best-effort)
+    try {
+      await signOut(auth);
+    } catch (e) {
+      // Can fail if user was already deleted/signed out; ignore.
+    }
+
+    // 3. Always clear local state and navigate (even if errors occurred)
+    dispatch(clearProfile());
+    dispatch(logout());
+    setShowDeleteModal(false);
+    setShowReauthModal(false);
+    setIsDeleting(false);
+    router.replace("/welcome");
+  }, [dispatch, router]);
+
   // Re-authenticate with password
   const handleReauthWithPassword = useCallback(async () => {
-    const user = firebaseUser;
+    const user = auth.currentUser;
     if (!user || !user.email) return;
 
     if (!password.trim()) {
@@ -138,7 +179,7 @@ export default function SettingsScreen() {
     } finally {
       setIsReauthing(false);
     }
-  }, [password, t, firebaseUser, performDelete]);
+  }, [password, t, performDelete]);
 
   // Re-authenticate with Apple
   const handleReauthWithApple = useCallback(async () => {
@@ -158,28 +199,29 @@ export default function SettingsScreen() {
         idToken: result.identityToken,
       });
 
-      if (firebaseUser) {
-        await reauthenticateWithCredential(firebaseUser, credential);
+      const user = auth.currentUser;
+      if (user) {
+        await reauthenticateWithCredential(user, credential);
         setShowReauthModal(false);
         await performDelete();
       }
     } catch (error: any) {
       if (error.code !== "ERR_CANCELED") {
-        Alert.alert(t("settings.error"), error.message || t("settings.reauthFailed"));
+        console.error("Apple reauth failed:", error.message);
       }
     } finally {
       setIsReauthing(false);
     }
-  }, [t, firebaseUser, performDelete]);
+  }, [performDelete]);
 
   // Re-authenticate with Google
   const handleReauthWithGoogle = useCallback(async () => {
     try {
       await promptGoogle();
     } catch (error: any) {
-      Alert.alert(t("settings.error"), error.message || t("settings.reauthFailed"));
+      console.error("Google reauth failed:", error.message);
     }
-  }, [promptGoogle, t]);
+  }, [promptGoogle]);
 
   // Handle Google re-auth response
   React.useEffect(() => {
@@ -187,73 +229,53 @@ export default function SettingsScreen() {
       const { id_token } = googleResponse.params;
       const credential = GoogleAuthProvider.credential(id_token);
       
-      if (firebaseUser) {
+      const user = auth.currentUser;
+      if (user) {
         setIsReauthing(true);
-        reauthenticateWithCredential(firebaseUser, credential)
+        reauthenticateWithCredential(user, credential)
           .then(() => {
             setShowReauthModal(false);
             performDelete();
           })
           .catch((error) => {
-            Alert.alert(t("settings.error"), error.message || t("settings.reauthFailed"));
+            console.error("Google reauth failed:", error.message);
           })
           .finally(() => {
             setIsReauthing(false);
           });
       }
     }
-  }, [googleResponse, t, firebaseUser, performDelete]);
-
-  // Perform the actual deletion
-  const performDelete = useCallback(async () => {
-    // Get fresh user reference for deletion
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert(t("settings.error"), t("settings.notLoggedIn"));
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      // 1. Delete user data from backend (MongoDB)
-      await apiService.deleteUser(user.uid);
-
-      // 2. Delete user from Firebase Auth
-      await user.delete();
-
-      // 3. Clear local state
-      dispatch(clearProfile());
-      dispatch(logout());
-
-      // 4. Close modal and navigate to welcome screen
-      setShowDeleteModal(false);
-      router.replace("/welcome");
-    } catch (error: any) {
-      console.error("Failed to delete account:", error);
-      Alert.alert(
-        t("settings.error"),
-        error.message || t("settings.deleteError")
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [dispatch, router, t]);
+  }, [googleResponse, performDelete]);
 
   const handleDeleteAccount = useCallback(async () => {
-    // Use firebaseUser state which is kept in sync via onAuthStateChanged
-    if (!firebaseUser) {
-      Alert.alert(t("settings.error"), t("settings.notLoggedIn"));
+    // Use auth.currentUser directly to ensure we have the actual Firebase user object
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("User not logged in");
       return;
     }
 
     setIsDeleting(true);
 
     try {
-      // Try to delete directly first
-      await apiService.deleteUser(firebaseUser.uid);
-      await firebaseUser.delete();
+      // 1. Try to delete from backend (ignore errors - user might not exist there)
+      try {
+        await apiService.deleteUser(user.uid);
+      } catch (backendError: any) {
+        console.log("Backend delete (ignoring):", backendError.message);
+      }
 
+      // 2. Delete from Firebase
+      await user.delete();
+
+      // 2.5 Ensure local Firebase session is cleared (best-effort)
+      try {
+        await signOut(auth);
+      } catch (e) {
+        // ignore
+      }
+
+      // Success - clear state and navigate
       dispatch(clearProfile());
       dispatch(logout());
       setShowDeleteModal(false);
@@ -266,15 +288,22 @@ export default function SettingsScreen() {
         setShowDeleteModal(false);
         setShowReauthModal(true);
       } else {
-        Alert.alert(
-          t("settings.error"),
-          error.message || t("settings.deleteError")
-        );
+        // Best-effort sign out anyway
+        try {
+          await signOut(auth);
+        } catch (e) {
+          // ignore
+        }
+        // Other Firebase error - still log out and redirect
+        dispatch(clearProfile());
+        dispatch(logout());
+        setShowDeleteModal(false);
+        router.replace("/welcome");
       }
     } finally {
       setIsDeleting(false);
     }
-  }, [dispatch, router, t, firebaseUser]);
+  }, [dispatch, router]);
 
   return (
     <SafeAreaView edges={["top"]} style={styles.container}>
