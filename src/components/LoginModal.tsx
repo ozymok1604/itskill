@@ -61,8 +61,12 @@ export function LoginModal({ visible, onClose }: Props) {
     resetErrors();
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
       if (userCredential.user) {
         try {
           await dispatch(fetchUser(userCredential.user.uid)).unwrap();
@@ -70,7 +74,7 @@ export function LoginModal({ visible, onClose }: Props) {
           console.error("Failed to fetch user profile:", error);
         }
       }
-      
+
       onClose();
     } catch (err: any) {
       if (
@@ -105,7 +109,10 @@ export function LoginModal({ visible, onClose }: Props) {
       ).unwrap();
 
       console.log("User synced:", syncedUser);
-      console.log("Synced user position:", syncedUser?.user?.position || syncedUser?.position);
+      console.log(
+        "Synced user position:",
+        syncedUser?.user?.position || syncedUser?.position
+      );
 
       // Оновлюємо профіль після синхронізації, щоб отримати всі дані
       try {
@@ -144,7 +151,7 @@ export function LoginModal({ visible, onClose }: Props) {
       });
 
       const userCredential = await signInWithCredential(auth, credential);
-      
+
       if (userCredential.user) {
         try {
           await dispatch(
@@ -158,7 +165,7 @@ export function LoginModal({ visible, onClose }: Props) {
           console.error("Failed to sync/fetch user profile:", error);
         }
       }
-      
+
       onClose();
     } catch (err: any) {
       if (err.code !== "ERR_CANCELED") {
@@ -172,7 +179,7 @@ export function LoginModal({ visible, onClose }: Props) {
     try {
       const userCredential = await signInWithPopup(auth, appleProvider);
       console.log("Sign in successful:", userCredential.user?.email);
-      
+
       if (userCredential.user) {
         try {
           await dispatch(
@@ -186,7 +193,7 @@ export function LoginModal({ visible, onClose }: Props) {
           console.error("Failed to sync/fetch user profile:", error);
         }
       }
-      
+
       onClose();
     } catch (err: any) {
       console.error("Apple sign in error:", err.code, err.message);
@@ -212,86 +219,116 @@ export function LoginModal({ visible, onClose }: Props) {
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           style={styles.kav}
         >
-      <View style={styles.modal}>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-          <Text style={styles.close}>✕</Text>
-        </TouchableOpacity>
+          <View style={styles.modal}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.close}>✕</Text>
+            </TouchableOpacity>
 
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.modalContent}
             >
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            onPress={() => setMode("login")}
-            style={[styles.tab, mode === "login" && styles.tabActive]}
-          >
-            <Text
+              <View style={styles.tabs}>
+                <TouchableOpacity
+                  onPress={() => setMode("login")}
+                  style={[styles.tab, mode === "login" && styles.tabActive]}
+                >
+                  <Text
                     style={[
                       styles.tabText,
                       mode === "login" && styles.tabTextActive,
                     ]}
-            >
-              {t("login.logIn")}
-            </Text>
-          </TouchableOpacity>
+                  >
+                    {t("login.logIn")}
+                  </Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setMode("signup")}
-            style={[styles.tab, mode === "signup" && styles.tabActive]}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                mode === "signup" && styles.tabTextActive,
-              ]}
-            >
-              {t("login.signUp")}
-            </Text>
-          </TouchableOpacity>
-        </View>
+                <TouchableOpacity
+                  onPress={() => setMode("signup")}
+                  style={[styles.tab, mode === "signup" && styles.tabActive]}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      mode === "signup" && styles.tabTextActive,
+                    ]}
+                  >
+                    {t("login.signUp")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-        <Input
-          error={emailError}
-          placeholder={t("login.email")}
-          value={email}
-          onChange={setEmail}
-        />
-        <Input
-          error={passwordError}
-          placeholder={t("login.password")}
-          type="password"
-          value={password}
-          onChange={setPassword}
-        />
+              <Input
+                error={emailError}
+                placeholder={t("login.email")}
+                value={email}
+                onChange={setEmail}
+              />
+              <Input
+                error={passwordError}
+                placeholder={t("login.password")}
+                type="password"
+                value={password}
+                onChange={setPassword}
+              />
 
-        <Button
-                title={
-                  mode === "login" ? t("login.logIn") : t("login.createAccount")
-                }
-          onPress={mode === "login" ? handleLogin : handleSignup}
-          disabled={!formValid}
-        />
+              {Platform.OS === "web" ? (
+                <button
+                  type="button"
+                  disabled={!formValid}
+                  onClick={mode === "login" ? handleLogin : handleSignup}
+                  style={{
+                    width: "100%",
+                    height: 50,
+                    borderRadius: 12,
+                    border: "none",
+                    backgroundColor: formValid ? "#22c55e" : "#14532d", // ЗЕЛЕНА
+                    color: "#ffffff",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    cursor: formValid ? "pointer" : "not-allowed",
+                    opacity: formValid ? 1 : 0.6,
+                  }}
+                >
+                  {mode === "login"
+                    ? t("login.logIn")
+                    : t("login.createAccount")}
+                </button>
+              ) : (
+                <Button
+                  title={
+                    mode === "login"
+                      ? t("login.logIn")
+                      : t("login.createAccount")
+                  }
+                  onPress={mode === "login" ? handleLogin : handleSignup}
+                  disabled={!formValid}
+                />
+              )}
 
-        {/* Apple Sign-In only on native iOS */}
-        {Platform.OS !== "web" && (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={styles.line} />
-              <Text style={styles.or}>{t("login.or")}</Text>
-              <View style={styles.line} />
-            </View>
+              {/* Apple Sign-In only on native iOS */}
+              {Platform.OS !== "web" && (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View style={styles.line} />
+                    <Text style={styles.or}>{t("login.or")}</Text>
+                    <View style={styles.line} />
+                  </View>
 
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={12}
-              style={{ width: "100%", height: 50 }}
-              onPress={handleAppleNative}
-            />
-          </>
-        )}
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={
+                      AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                    }
+                    buttonStyle={
+                      AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                    }
+                    cornerRadius={12}
+                    style={{ width: "100%", height: 50 }}
+                    onPress={handleAppleNative}
+                  />
+                </>
+              )}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

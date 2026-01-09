@@ -111,7 +111,7 @@ export default function WelcomeScreen() {
     try {
       const userCredential = await signInWithPopup(auth, appleProvider);
       console.log("Sign in successful:", userCredential.user?.email);
-      
+
       if (userCredential.user) {
         try {
           await dispatch(
@@ -151,8 +151,12 @@ export default function WelcomeScreen() {
         {/* Apple Sign-In only on native iOS */}
         {Platform.OS !== "web" && (
           <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+            buttonType={
+              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+            }
+            buttonStyle={
+              AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+            }
             cornerRadius={16}
             style={{ width: "100%", height: 54 }}
             onPress={handleAppleNative}
