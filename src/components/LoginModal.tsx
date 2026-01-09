@@ -13,10 +13,9 @@ import {
 
 import { Input } from "@/src/components/Input";
 import { Button } from "@/src/components/Button";
-import { GoogleIcon } from "@/assets/icons/google";
 
 import * as AppleAuthentication from "expo-apple-authentication";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch } from "@/src/store/hooks";
 import { syncUser, fetchUser } from "@/src/store/slices/userSlice";
@@ -25,16 +24,12 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   OAuthProvider,
-  GoogleAuthProvider,
   signInWithCredential,
+  signInWithPopup,
 } from "firebase/auth";
 
-import { auth } from "@/src/firebase";
-
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
+import { auth, appleProvider } from "@/src/firebase";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
-WebBrowser.maybeCompleteAuthSession();
 
 type Props = {
   visible: boolean;
@@ -59,32 +54,6 @@ export function LoginModal({ visible, onClose }: Props) {
   const emailValid = email.includes("@") && email.includes(".");
   const passwordValid = password.length >= 6;
   const formValid = emailValid && passwordValid;
-
-  // GOOGLE
-  const [req, res, promptGoogle] = Google.useAuthRequest({
-    iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-    webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
-    responseType: "id_token",
-  });
-
-  useEffect(() => {
-    if (res?.type === "success") {
-      const { id_token } = res.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential)
-        .then(async (userCredential) => {
-          if (userCredential.user) {
-            try {
-              await dispatch(fetchUser(userCredential.user.uid)).unwrap();
-            } catch (error) {
-              console.error("Failed to fetch user profile:", error);
-            }
-          }
-          onClose();
-        })
-        .catch((err) => console.error("Google sign in error:", err.message));
-    }
-  }, [res, dispatch]);
 
   const handleLogin = async () => {
     if (!formValid) return;
@@ -158,7 +127,7 @@ export function LoginModal({ visible, onClose }: Props) {
     }
   };
 
-  const handleApple = async () => {
+  const handleAppleNative = async () => {
     try {
       const result = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -178,15 +147,12 @@ export function LoginModal({ visible, onClose }: Props) {
       
       if (userCredential.user) {
         try {
-          // Спочатку синхронізуємо користувача (створюємо якщо не існує)
           await dispatch(
             syncUser({
               uid: userCredential.user.uid,
               email: userCredential.user.email,
             })
           ).unwrap();
-          
-          // Потім завантажуємо повний профіль
           await dispatch(fetchUser(userCredential.user.uid)).unwrap();
         } catch (error) {
           console.error("Failed to sync/fetch user profile:", error);
@@ -197,6 +163,35 @@ export function LoginModal({ visible, onClose }: Props) {
     } catch (err: any) {
       if (err.code !== "ERR_CANCELED") {
         console.error("Apple sign in error:", err.message);
+      }
+    }
+  };
+
+  const handleAppleWeb = async () => {
+    console.log("Starting Apple Web Sign In...");
+    try {
+      const userCredential = await signInWithPopup(auth, appleProvider);
+      console.log("Sign in successful:", userCredential.user?.email);
+      
+      if (userCredential.user) {
+        try {
+          await dispatch(
+            syncUser({
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+            })
+          ).unwrap();
+          await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+        } catch (error) {
+          console.error("Failed to sync/fetch user profile:", error);
+        }
+      }
+      
+      onClose();
+    } catch (err: any) {
+      console.error("Apple sign in error:", err.code, err.message);
+      if (err.code !== "auth/popup-closed-by-user") {
+        alert(`Apple Sign-In Error: ${err.message}`);
       }
     }
   };
@@ -279,30 +274,24 @@ export function LoginModal({ visible, onClose }: Props) {
           disabled={!formValid}
         />
 
-        <View style={styles.dividerRow}>
-          <View style={styles.line} />
-          <Text style={styles.or}>{t("login.or")}</Text>
-          <View style={styles.line} />
-        </View>
+        {/* Apple Sign-In only on native iOS */}
+        {Platform.OS !== "web" && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.line} />
+              <Text style={styles.or}>{t("login.or")}</Text>
+              <View style={styles.line} />
+            </View>
 
-        <Button
-          type="white"
-          icon={<GoogleIcon size={18} />}
-          title={t("login.continueWithGoogle")}
-          onPress={() => promptGoogle()}
-        />
-
-        <AppleAuthentication.AppleAuthenticationButton
-                buttonType={
-                  AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-                }
-                buttonStyle={
-                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-          cornerRadius={12}
-          style={{ width: "100%", height: 50 }}
-          onPress={handleApple}
-        />
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
+              style={{ width: "100%", height: 50 }}
+              onPress={handleAppleNative}
+            />
+          </>
+        )}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

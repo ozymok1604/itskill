@@ -2,51 +2,37 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Easing,
+  Platform,
 } from "react-native";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
 
 import * as AppleAuthentication from "expo-apple-authentication";
-import { GoogleIcon } from "@/assets/icons/google";
 import { Button } from "@/src/components/Button";
 
-import { useRouter, Redirect } from "expo-router";
+import { Redirect } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/src/firebase";
+import {
+  onAuthStateChanged,
+  OAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth, appleProvider } from "@/src/firebase";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
 import { setUser, setLoading } from "@/src/store/slices/authSlice";
 import { fetchUser, syncUser } from "@/src/store/slices/userSlice";
 
 import { LoginModal } from "@/src/components/LoginModal";
 
-import {
-  GoogleAuthProvider,
-  OAuthProvider,
-  signInWithCredential,
-} from "firebase/auth";
-
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-
-WebBrowser.maybeCompleteAuthSession();
-
 export default function WelcomeScreen() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [showLogin, setShowLogin] = useState(false);
-
-  const [request, response, promptGoogle] = Google.useAuthRequest({
-    iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-    webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
-    responseType: "id_token",
-  });
 
   const fullText = "ITSkill●";
   const [typedText, setTypedText] = useState("");
@@ -61,25 +47,6 @@ export default function WelcomeScreen() {
     });
     return () => unsubscribe();
   }, [dispatch]);
-
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-
-      signInWithCredential(auth, credential)
-        .then(async (userCredential) => {
-          if (userCredential.user) {
-            try {
-              await dispatch(fetchUser(userCredential.user.uid)).unwrap();
-            } catch (error) {
-              console.error("Failed to fetch user profile:", error);
-            }
-          }
-        })
-        .catch((err) => console.error("Google sign in error:", err.message));
-    }
-  }, [response, dispatch]);
 
   useEffect(() => {
     let index = 0;
@@ -100,7 +67,7 @@ export default function WelcomeScreen() {
     }).start();
   }, []);
 
-  const handleApple = async () => {
+  const handleAppleNative = async () => {
     try {
       const appleResult = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -122,24 +89,47 @@ export default function WelcomeScreen() {
 
       if (userCredential.user) {
         try {
-          // Спочатку синхронізуємо користувача (створюємо якщо не існує)
           await dispatch(
             syncUser({
               uid: userCredential.user.uid,
               email: userCredential.user.email,
             })
           ).unwrap();
-          
-          // Потім завантажуємо повний профіль
           await dispatch(fetchUser(userCredential.user.uid)).unwrap();
         } catch (error) {
           console.error("Failed to sync/fetch user profile:", error);
         }
       }
-
     } catch (err: any) {
       if (err.code === "ERR_CANCELED") return;
       console.error("Apple sign in error:", err.message);
+    }
+  };
+
+  const handleAppleWeb = async () => {
+    console.log("Starting Apple Web Sign In...");
+    try {
+      const userCredential = await signInWithPopup(auth, appleProvider);
+      console.log("Sign in successful:", userCredential.user?.email);
+      
+      if (userCredential.user) {
+        try {
+          await dispatch(
+            syncUser({
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+            })
+          ).unwrap();
+          await dispatch(fetchUser(userCredential.user.uid)).unwrap();
+        } catch (error) {
+          console.error("Failed to sync/fetch user profile:", error);
+        }
+      }
+    } catch (err: any) {
+      console.error("Apple sign in error:", err.code, err.message);
+      if (err.code !== "auth/popup-closed-by-user") {
+        alert(`Apple Sign-In Error: ${err.message}`);
+      }
     }
   };
 
@@ -158,20 +148,16 @@ export default function WelcomeScreen() {
       <Animated.View
         style={[styles.bottomSheet, { transform: [{ translateY: slideAnim }] }]}
       >
-        <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-          cornerRadius={16}
-          style={{ width: "100%", height: 54 }}
-          onPress={handleApple}
-        />
-
-        {/* <Button
-          type="white"
-          title={t("welcome.continueWithGoogle")}
-          icon={<GoogleIcon size={20} />}
-          onPress={() => promptGoogle()}
-        /> */}
+        {/* Apple Sign-In only on native iOS */}
+        {Platform.OS !== "web" && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+            cornerRadius={16}
+            style={{ width: "100%", height: 54 }}
+            onPress={handleAppleNative}
+          />
+        )}
 
         <Button
           type="primary"

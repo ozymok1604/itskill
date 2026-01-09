@@ -20,6 +20,7 @@
     "createAccount": "Create account",
     "or": "OR",
     "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple",
     "success": "Success",
     "accountCreated": "Account created",
     "appleSuccess": "Apple login successful",

@@ -12,8 +12,30 @@ import {
   clearProfile,
   getPositions,
 } from "@/src/store/slices/userSlice";
+import TikTokBusiness from "react-native-tiktok-business-sdk";
+
 
 export default function Index() {
+
+  async function initializeTikTokSDK() {
+    try {
+      await TikTokBusiness.initializeSdk(
+        '6756545659',
+        '7587378999425351698',
+        true
+      );
+      // SDK is now initialized, and tracking is active.
+    } catch (error) {
+      console.error('Error initializing TikTok SDK:', error);
+    }
+  }
+
+  useEffect(() => {
+    initializeTikTokSDK();
+  }, []);
+  
+  
+  
   const dispatch = useAppDispatch();
   const { isAuthenticated, isLoading, user } = useAppSelector(
     (state) => state.auth

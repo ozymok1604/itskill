@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { VSCodeColors, Fonts } from "@/src/constants/theme";
 
-type ButtonVariant = "primary" | "secondary" | "white";
+type ButtonVariant = "primary" | "secondary" | "white" | "dark";
 
 type Props = {
   title: string;
@@ -41,6 +41,7 @@ export const Button = ({
         type === "primary" && styles.primary,
         type === "secondary" && styles.secondary,
         type === "white" && styles.white,
+        type === "dark" && styles.dark,
 
         disabled && styles.disabled,
 
@@ -53,6 +54,7 @@ export const Button = ({
           style={[
             styles.text,
             type === "white" && styles.textDark,
+            type === "dark" && styles.textWhite,
             disabled && styles.textDisabled,
           ]}
         >
@@ -109,6 +111,15 @@ const styles = StyleSheet.create({
   white: {
     backgroundColor: VSCodeColors.surface,
     borderColor: VSCodeColors.border,
+  },
+
+  dark: {
+    backgroundColor: "#000000",
+    borderColor: "#000000",
+  },
+
+  textWhite: {
+    color: "#FFFFFF",
   },
 
   disabled: {
